@@ -1,0 +1,173 @@
+{{!
+    @template local_rapidcmi5/project_detail
+
+    Template for the RapidCMI5 project detail page.
+}}
+<div class="local-rapidcmi5-project-detail">
+    <p><a href="{{{backurl}}}">&laquo; {{#str}}projects, local_rapidcmi5{{/str}}</a></p>
+
+    {{#packagemissing}}
+    <div class="alert alert-warning">
+        {{#str}}packagemissing, local_rapidcmi5{{/str}}
+    </div>
+    {{/packagemissing}}
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">{{project.name}}</h5>
+            <dl class="row mb-0">
+                <dt class="col-sm-3">{{#str}}projectidentifier, local_rapidcmi5{{/str}}</dt>
+                <dd class="col-sm-9"><code>{{project.identifier}}</code></dd>
+
+                {{#project.hasgitrepo}}
+                <dt class="col-sm-3">{{#str}}gitrepo, local_rapidcmi5{{/str}}</dt>
+                <dd class="col-sm-9"><a href="{{project.gitrepourl}}" target="_blank" rel="noopener">{{project.gitrepourl}}</a></dd>
+                {{/project.hasgitrepo}}
+
+                {{#project.hasdescription}}
+                <dt class="col-sm-3">{{#str}}description, local_rapidcmi5{{/str}}</dt>
+                <dd class="col-sm-9">{{project.description}}</dd>
+                {{/project.hasdescription}}
+
+                <dt class="col-sm-3">{{#str}}created, local_rapidcmi5{{/str}}</dt>
+                <dd class="col-sm-9">{{project.timecreated}}</dd>
+
+                <dt class="col-sm-3">{{#str}}lastmodified, local_rapidcmi5{{/str}}</dt>
+                <dd class="col-sm-9">{{project.timemodified}}</dd>
+            </dl>
+            <form method="post" action="{{{actionurl}}}" style="display:inline"
+                  onsubmit="return confirm('{{#str}}confirmdeleteproject, local_rapidcmi5{{/str}}');">
+                <input type="hidden" name="action" value="deleteproject">
+                <input type="hidden" name="projectid" value="{{project.id}}">
+                <input type="hidden" name="sesskey" value="{{sesskey}}">
+                <button type="submit" class="btn btn-sm btn-danger">
+                    {{#str}}deleteproject, local_rapidcmi5{{/str}}
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <h4>{{#str}}versions, local_rapidcmi5{{/str}}</h4>
+    {{#hasversions}}
+    <table class="table table-striped mb-4">
+        <thead>
+            <tr>
+                <th>{{#str}}version, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}commithash, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}buildtimestamp, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}player, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}created, local_rapidcmi5{{/str}}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#versions}}
+            <tr{{#iscurrent}} class="table-active"{{/iscurrent}}>
+                <td>
+                    {{versionnumber}}
+                    {{#iscurrent}}<span class="badge badge-success">{{#str}}currentversion, local_rapidcmi5{{/str}}</span>{{/iscurrent}}
+                </td>
+                <td>{{#hascommit}}<code>{{shortcommit}}</code>{{/hascommit}}</td>
+                <td>{{buildtimestamp}}</td>
+                <td>
+                    {{playerversion}}
+                    {{#hasplayerversions}}
+                    <form method="post" action="{{{actionurl}}}" style="display:inline"
+                          onsubmit="return confirm('{{#str}}upgradeplayerconfirm, local_rapidcmi5{{/str}}');">
+                        <input type="hidden" name="action" value="setlibraryplayer">
+                        <input type="hidden" name="libraryversionid" value="{{libraryversionid}}">
+                        <input type="hidden" name="sesskey" value="{{sesskey}}">
+                        <input type="hidden" name="returnurl" value="{{{returnurl}}}">
+                        <div class="d-inline-flex align-items-center">
+                            <select name="playerversionid" class="custom-select custom-select-sm mr-1">
+                                {{#playeroptions}}
+                                <option value="{{id}}">{{label}}</option>
+                                {{/playeroptions}}
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-info">
+                                {{#str}}setplayer, local_rapidcmi5{{/str}}
+                            </button>
+                        </div>
+                    </form>
+                    {{/hasplayerversions}}
+                </td>
+                <td>{{timecreated}}</td>
+            </tr>
+            {{/versions}}
+        </tbody>
+    </table>
+    {{/hasversions}}
+    {{^hasversions}}
+    <p class="text-muted">{{#str}}noversions, local_rapidcmi5{{/str}}</p>
+    {{/hasversions}}
+
+    <h4>{{#str}}deployments, local_rapidcmi5{{/str}}</h4>
+    {{#hasdeployments}}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>{{#str}}course, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}version, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}player, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}lastmodified, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}actions, local_rapidcmi5{{/str}}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#deployments}}
+            <tr{{#isoutdated}} class="table-warning"{{/isoutdated}}>
+                <td><a href="{{{courseurl}}}">{{coursename}}</a></td>
+                <td>
+                    {{versionnumber}}
+                    {{#isoutdated}}
+                    <span class="badge badge-warning ml-1">{{versionnumber}} &rarr; {{latestversion}}</span>
+                    {{/isoutdated}}
+                </td>
+                <td>
+                    {{playerversion}}
+                    {{#hasplayerupdate}}
+                    <span class="badge badge-info ml-1">{{playerversion}} &rarr; {{latestplayerversion}}</span>
+                    {{/hasplayerupdate}}
+                </td>
+                <td>{{timemodified}}</td>
+                <td>
+                    {{#hasplayerversions}}
+                    <form method="post" action="{{{actionurl}}}" style="display:inline"
+                          onsubmit="return confirm('{{#str}}upgradeplayerconfirm, local_rapidcmi5{{/str}}');">
+                        <input type="hidden" name="action" value="upgradeplayer">
+                        <input type="hidden" name="deploymentid" value="{{id}}">
+                        <input type="hidden" name="sesskey" value="{{sesskey}}">
+                        <input type="hidden" name="returnurl" value="{{{returnurl}}}">
+                        <div class="d-inline-flex align-items-center mb-1">
+                            <select name="playerversionid" class="custom-select custom-select-sm mr-1">
+                                {{#playeroptions}}
+                                <option value="{{id}}">{{label}}</option>
+                                {{/playeroptions}}
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-info">
+                                {{#str}}setplayer, local_rapidcmi5{{/str}}
+                            </button>
+                        </div>
+                    </form>
+                    {{/hasplayerversions}}
+                    {{#hascontentupdate}}
+                    <form method="post" action="{{{actionurl}}}" style="display:inline"
+                          onsubmit="return confirm('{{#str}}updatecontentconfirm, local_rapidcmi5{{/str}}');">
+                        <input type="hidden" name="action" value="updatecontent">
+                        <input type="hidden" name="deploymentid" value="{{id}}">
+                        <input type="hidden" name="sesskey" value="{{sesskey}}">
+                        <input type="hidden" name="returnurl" value="{{{returnurl}}}">
+                        <button type="submit" class="btn btn-sm btn-warning mb-1">
+                            {{#str}}updatecontent, local_rapidcmi5{{/str}}
+                        </button>
+                    </form>
+                    {{/hascontentupdate}}
+                </td>
+            </tr>
+            {{/deployments}}
+        </tbody>
+    </table>
+    {{/hasdeployments}}
+    {{^hasdeployments}}
+    <p class="text-muted">{{#str}}nodeployments, local_rapidcmi5{{/str}}</p>
+    {{/hasdeployments}}
+</div>

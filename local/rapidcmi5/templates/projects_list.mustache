@@ -1,0 +1,48 @@
+{{!
+    @template local_rapidcmi5/projects_list
+
+    Template for the RapidCMI5 projects list page.
+}}
+<div class="local-rapidcmi5-projects">
+    <div class="d-flex justify-content-between align-items-start mb-3">
+        <form method="get" action="{{{searchurl}}}">
+            <div class="input-group" style="max-width: 400px;">
+                <input type="text" name="search" value="{{search}}" class="form-control"
+                       placeholder="{{#str}}search, local_rapidcmi5{{/str}}..." />
+                <div class="input-group-append">
+                    <button type="submit" class="btn btn-primary">{{#str}}search, local_rapidcmi5{{/str}}</button>
+                </div>
+            </div>
+        </form>
+        <a href="{{{uploadurl}}}" class="btn btn-success">{{#str}}uploadpackage, local_rapidcmi5{{/str}}</a>
+    </div>
+
+    {{#hasprojects}}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>{{#str}}projectname, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}projectidentifier, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}currentversion, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}gitrepo, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}lastmodified, local_rapidcmi5{{/str}}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#projects}}
+            <tr>
+                <td><a href="{{{detailurl}}}">{{name}}</a></td>
+                <td><code>{{identifier}}</code></td>
+                <td>{{#currentversion}}<span class="badge badge-info">{{currentversion}}</span>{{/currentversion}}</td>
+                <td>{{#hasgitrepo}}<a href="{{gitrepourl}}" target="_blank" rel="noopener">repo</a>{{/hasgitrepo}}</td>
+                <td>{{timemodified}}</td>
+            </tr>
+            {{/projects}}
+        </tbody>
+    </table>
+    {{/hasprojects}}
+
+    {{^hasprojects}}
+    <div class="alert alert-info">{{#str}}noprojects, local_rapidcmi5{{/str}}</div>
+    {{/hasprojects}}
+</div>

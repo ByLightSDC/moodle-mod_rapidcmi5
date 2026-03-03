@@ -1,0 +1,57 @@
+{{!
+    @template local_rapidcmi5/unmanaged_activities
+
+    Template for the unmanaged RapidCMI5 activities scanner page.
+}}
+<div class="local-rapidcmi5-unmanaged">
+    <p><a href="{{{projectsurl}}}">&laquo; {{#str}}projects, local_rapidcmi5{{/str}}</a></p>
+
+    {{#hasactivities}}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>{{#str}}course, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}activityname, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}playerversion, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}aucount, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}actions, local_rapidcmi5{{/str}}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#activities}}
+            <tr>
+                <td>{{coursename}}</td>
+                <td>{{activityname}}</td>
+                <td>{{playerversion}}</td>
+                <td>{{aucount}}</td>
+                <td>
+                    {{#hasplayerversions}}
+                    <form method="post" action="{{{actionurl}}}" style="display:inline"
+                          onsubmit="return confirm('{{#str}}upgradeplayerconfirm, local_rapidcmi5{{/str}}');">
+                        <input type="hidden" name="action" value="upgradeplayer">
+                        <input type="hidden" name="cmid" value="{{cmid}}">
+                        <input type="hidden" name="sesskey" value="{{sesskey}}">
+                        <input type="hidden" name="returnurl" value="{{{returnurl}}}">
+                        <div class="d-inline-flex align-items-center">
+                            <select name="playerversionid" class="custom-select custom-select-sm mr-1">
+                                {{#playeroptions}}
+                                <option value="{{id}}">{{label}}</option>
+                                {{/playeroptions}}
+                            </select>
+                            <button type="submit" class="btn btn-sm btn-warning">
+                                {{#str}}setplayer, local_rapidcmi5{{/str}}
+                            </button>
+                        </div>
+                    </form>
+                    {{/hasplayerversions}}
+                </td>
+            </tr>
+            {{/activities}}
+        </tbody>
+    </table>
+    {{/hasactivities}}
+
+    {{^hasactivities}}
+    <div class="alert alert-info">{{#str}}nounmanaged, local_rapidcmi5{{/str}}</div>
+    {{/hasactivities}}
+</div>

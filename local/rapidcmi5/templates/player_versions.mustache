@@ -1,0 +1,58 @@
+{{!
+    @template local_rapidcmi5/player_versions
+
+    Template for the player versions admin page.
+}}
+<div class="local-rapidcmi5-player-versions">
+    <p><a href="{{{projectsurl}}}">&laquo; {{#str}}projects, local_rapidcmi5{{/str}}</a></p>
+
+    {{#hasversions}}
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>{{#str}}version, local_rapidcmi5{{/str}}</th>
+                <th>SHA256</th>
+                <th>Files</th>
+                <th>{{#str}}packages, local_rapidcmi5{{/str}}</th>
+                <th>{{#str}}created, local_rapidcmi5{{/str}}</th>
+                <th>Status</th>
+                <th>{{#str}}actions, local_rapidcmi5{{/str}}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#versions}}
+            <tr{{#islatest}} class="table-active"{{/islatest}}>
+                <td>{{version}}</td>
+                <td><code>{{sha256hash}}</code></td>
+                <td>{{filecount}}</td>
+                <td>{{packagecount}}</td>
+                <td>{{timecreated}}</td>
+                <td>
+                    {{#islatest}}
+                    <span class="badge badge-success">{{#str}}currentplayerversion, local_rapidcmi5{{/str}}</span>
+                    {{/islatest}}
+                </td>
+                <td>
+                    {{#canupgrade}}
+                    <form method="post" action="{{{upgradeallurl}}}" style="display:inline"
+                          onsubmit="return confirm('{{#str}}upgradeallconfirm, local_rapidcmi5{{/str}}');">
+                        <input type="hidden" name="action" value="upgradeall">
+                        <input type="hidden" name="oldplayerid" value="{{id}}">
+                        <input type="hidden" name="sesskey" value="{{sesskey}}">
+                        <input type="hidden" name="returnurl" value="{{{returnurl}}}">
+                        <button type="submit" class="btn btn-sm btn-warning">
+                            {{#str}}upgradeall, local_rapidcmi5{{/str}}
+                        </button>
+                    </form>
+                    {{/canupgrade}}
+                </td>
+            </tr>
+            {{/versions}}
+        </tbody>
+    </table>
+    {{/hasversions}}
+
+    {{^hasversions}}
+    <div class="alert alert-info">{{#str}}noplayerversions, local_rapidcmi5{{/str}}</div>
+    {{/hasversions}}
+</div>

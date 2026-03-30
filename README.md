@@ -5,7 +5,7 @@ Bridge plugin between the [RapidCMI5 Electron CLI](https://github.com/bylightsdc
 ## Requirements
 
 - **Moodle 4.5+** (version 2024100700 or later)
-- **[mod_cmi5](https://github.com/dropte/moodle-mod_cmi5)** v2026022600 or later — the self-contained cmi5 activity module that provides the content library and cmi5 player
+- **[mod_cmi5](https://github.com/bylightsdc/moodle-mod_cmi5)** v2026022600 or later — the self-contained cmi5 activity module that provides the content library and cmi5 player
 
 `mod_cmi5` **must be installed first**. Moodle will refuse to install this plugin without it.
 

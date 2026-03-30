@@ -1,0 +1,35 @@
+name: Release Moodle Plugin
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version info
+        id: version
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          RELEASE=$(php -r "require 'local/rapidcmi5/version.php'; echo \$plugin->release;")
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "release=$RELEASE" >> "$GITHUB_OUTPUT"
+
+      - name: Build plugin ZIP
+        run: |
+          cd local
+          zip -r /tmp/moodle-local_rapidcmi5.zip rapidcmi5/ -x 'rapidcmi5/.git/*' 'rapidcmi5/.github/*' 'rapidcmi5/.gitignore' 'rapidcmi5/CLAUDE.md' 'rapidcmi5/.claude/*'
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.version.outputs.tag }}
+          files: /tmp/moodle-local_rapidcmi5.zip
+          generate_release_notes: true

@@ -1,2 +1,14 @@
+# macOS
+.DS_Store
+._*
+
+# Editor / tooling
 .claude/
 CLAUDE.md
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node (build tooling)
+node_modules/

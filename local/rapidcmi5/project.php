@@ -32,8 +32,10 @@ $PAGE->set_url(new moodle_url('/local/rapidcmi5/project.php', ['id' => $id]));
 $PAGE->set_title($project->name);
 $PAGE->set_heading($project->name);
 $PAGE->set_pagelayout('admin');
-$PAGE->navbar->add(get_string('projects', 'local_rapidcmi5'),
-    new moodle_url('/local/rapidcmi5/index.php'));
+$PAGE->navbar->add(
+    get_string('projects', 'local_rapidcmi5'),
+    new moodle_url('/local/rapidcmi5/index.php')
+);
 $PAGE->navbar->add($project->name);
 
 $versions = \local_rapidcmi5\project_manager::get_versions($id);
@@ -209,5 +211,11 @@ $templatedata = [
 ];
 
 echo $OUTPUT->header();
+echo html_writer::link(
+    new moodle_url('/local/rapidcmi5/manage.php'),
+    get_string('backtomanagement', 'local_rapidcmi5'),
+    ['class' => 'btn btn-secondary mb-3']
+);
+$form->display();
 echo $OUTPUT->render_from_template('local_rapidcmi5/project_detail', $templatedata);
 echo $OUTPUT->footer();

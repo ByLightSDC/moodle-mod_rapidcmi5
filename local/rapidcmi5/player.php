@@ -96,6 +96,11 @@ $templatedata = [
 ];
 
 echo $OUTPUT->header();
+echo html_writer::link(
+    new moodle_url('/local/rapidcmi5/manage.php'),
+    get_string('backtomanagement', 'local_rapidcmi5'),
+    ['class' => 'btn btn-secondary mb-3']
+);
 $form->display();
 echo $OUTPUT->render_from_template('local_rapidcmi5/player_versions', $templatedata);
 echo $OUTPUT->footer();

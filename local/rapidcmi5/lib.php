@@ -26,7 +26,8 @@
  * @param array $options
  * @return bool
  */
-function local_rapidcmi5_pluginfile($course, $cm, $context, $filearea, $args, $forcedownload, array $options = []) {
+function local_rapidcmi5_pluginfile($course, $cm, $context, $filearea, $args, $forcedownload, array $options = [])
+{
     if ($context->contextlevel != CONTEXT_SYSTEM) {
         return false;
     }
@@ -56,7 +57,8 @@ function local_rapidcmi5_pluginfile($course, $cm, $context, $filearea, $args, $f
  *
  * @param cm_info $cminfo
  */
-function local_rapidcmi5_cm_info_dynamic(cm_info $cminfo) {
+function local_rapidcmi5_cm_info_dynamic(cm_info $cminfo)
+{
     if ($cminfo->modname !== 'cmi5') {
         return;
     }
@@ -91,12 +93,38 @@ function local_rapidcmi5_cm_info_dynamic(cm_info $cminfo) {
 }
 
 /**
+ * Provide a "RapidCMI5" item for the Moodle Workplace app drawer (quick access grid).
+ *
+ * The Workplace theme calls get_plugins_with_function('theme_workplace_menu_items')
+ * and renders returned items as icons in the grid popup triggered by the launcher (:::) icon.
+ *
+ * @return array Array of menu item arrays with 'url', 'name', and 'imageurl' keys.
+ */
+function local_rapidcmi5_theme_workplace_menu_items(): array
+{
+    global $OUTPUT;
+
+    $syscontext = context_system::instance();
+
+    if (!has_capability('local/rapidcmi5:manage', $syscontext)) {
+        return [];
+    }
+
+    return [[
+        'url' => new moodle_url('/local/rapidcmi5/manage.php'),
+        'name' => get_string('pluginname', 'local_rapidcmi5'),
+        'imageurl' => $OUTPUT->image_url('icon', 'local_rapidcmi5')->out(false),
+    ]];
+}
+
+/**
  * Add update notification to the cmi5 activity settings form.
  *
  * @param moodleform $formwrapper
  * @param MoodleQuickForm $mform
  */
-function local_rapidcmi5_coursemodule_standard_elements($formwrapper, $mform) {
+function local_rapidcmi5_coursemodule_standard_elements($formwrapper, $mform)
+{
     $cm = $formwrapper->get_coursemodule();
     if (!$cm || $cm->modname !== 'cmi5') {
         return;

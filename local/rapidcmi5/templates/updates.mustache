@@ -29,7 +29,7 @@
                        data-action="toggle" data-toggle="master" data-togglegroup="rcmi-updates">
                 <label for="rcmi-updates-all" class="form-check-label">{{#str}}updatesselectall, local_rapidcmi5{{/str}}</label>
             </div>
-            <button type="submit" class="btn btn-primary" data-action="toggle" data-toggle="action"
+            <button type="submit" class="btn btn-primary rcmi-update-selected" data-action="toggle" data-toggle="action"
                     data-togglegroup="rcmi-updates"{{^selectedcount}} disabled{{/selectedcount}}>
                 {{#str}}updatesapply, local_rapidcmi5{{/str}}
                 (<span data-region="rcmi-updates-count">{{selectedcount}}</span>)

@@ -195,3 +195,14 @@
     .rapidcmi5-dashboard .rcmi-update-project .table th:first-child,
     .rapidcmi5-dashboard .rcmi-update-project .table td:first-child { padding-left: 1.1rem; }
 }
+
+/* Keep the disabled bulk action legible without the theme's faded primary fill. */
+.rapidcmi5-dashboard .rcmi-update-selected:disabled,
+.rapidcmi5-dashboard .rcmi-update-selected.disabled {
+    color: var(--rcmi-muted);
+    background: var(--bs-tertiary-bg, #f1f3f5);
+    border-color: var(--rcmi-border);
+    opacity: 1;
+    box-shadow: none;
+    text-shadow: none;
+}

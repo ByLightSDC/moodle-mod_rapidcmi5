@@ -6,6 +6,13 @@
 <div class="local-rapidcmi5-project-detail">
     {{> local_rapidcmi5/detail_navigation }}
 
+    {{#hasupdates}}
+    <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between">
+        <span>{{updatesbanner}}</span>
+        <a class="btn btn-sm btn-primary" href="{{{updatesurl}}}">{{#str}}reviewupdates, local_rapidcmi5{{/str}}</a>
+    </div>
+    {{/hasupdates}}
+
     {{#packagemissing}}
     <div class="alert alert-warning">
         {{#str}}packagemissing, local_rapidcmi5{{/str}}

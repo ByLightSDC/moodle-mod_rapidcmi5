@@ -28,6 +28,37 @@ require_once($CFG->dirroot . '/course/modlib.php');
 class deployment_manager {
 
     /**
+     * Move a deployed activity to another version of its project, keeping its name and learner progress.
+     *
+     * AUs are updated in place by IRI (see content_library::copy_structure_to_activity()), so learner
+     * records stay attached.
+     *
+     * @param int $deploymentid Deployment ID.
+     * @param int $versionid Project version to move the activity to.
+     * @return \stdClass The updated deployment.
+     * @throws \moodle_exception error:libraryrevisionmissing when the version's library revision cannot be found.
+     */
+    public static function update_deployment(int $deploymentid, int $versionid): \stdClass {
+        global $DB;
+        $deployment = $DB->get_record('local_rapidcmi5_deployments', ['id' => $deploymentid], '*', MUST_EXIST);
+        $version = $DB->get_record('local_rapidcmi5_versions',
+            ['id' => $versionid, 'projectid' => $deployment->projectid], '*', MUST_EXIST);
+        $revision = project_manager::get_library_version($version);
+        if (!$revision) {
+            throw new \moodle_exception('error:libraryrevisionmissing', 'local_rapidcmi5');
+        }
+        $transaction = $DB->start_delegated_transaction();
+        self::update_activity((int) $deployment->cmid, (int) $revision->id);
+        $deployment->versionid = $version->id;
+        $deployment->timemodified = time();
+        $DB->update_record('local_rapidcmi5_deployments', $deployment);
+        $transaction->allow_commit();
+        self::fire_deployed_event((int) $deployment->id, (int) $deployment->courseid, (int) $deployment->cmid,
+            (int) $version->id);
+        return $deployment;
+    }
+
+    /**
      * Track a cmi5 activity added outside RapidCMI5, such as from the mod_cmi5 activity library.
      *
      * The activity is recorded as a deployment when its library revision belongs to exactly one project
@@ -242,7 +273,7 @@ class deployment_manager {
      * @param string $name Updated activity name.
      * @return int Course module ID.
      */
-    private static function update_activity(int $cmid, int $libraryversionid, string $name): int {
+    private static function update_activity(int $cmid, int $libraryversionid, ?string $name = null): int {
         global $DB;
 
         $cm = get_coursemodule_from_id('cmi5', $cmid, 0, false, MUST_EXIST);
@@ -252,7 +283,9 @@ class deployment_manager {
 
         // Update the cmi5 instance record.
         $instance = $DB->get_record('cmi5', ['id' => $cm->instance], '*', MUST_EXIST);
-        $instance->name = $name;
+        if ($name !== null) {
+            $instance->name = $name;
+        }
         $instance->packageid = $libraryversion->packageid;
         $instance->packageversionid = $libraryversionid;
         $instance->timemodified = time();

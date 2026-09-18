@@ -1,0 +1,108 @@
+{{!
+    @template local_rapidcmi5/updates
+    Activities using an older version of their project, grouped by project, with bulk update.
+}}
+<div class="local-rapidcmi5-updates">
+    <div class="rcmi-toolbar">
+        <form method="get" action="{{{filterurl}}}">
+            {{#projectid}}<input type="hidden" name="projectid" value="{{projectid}}">{{/projectid}}
+            <label class="sr-only" for="rcmi-updates-search">{{#str}}searchprojects, local_rapidcmi5{{/str}}</label>
+            <div class="input-group">
+                <input id="rcmi-updates-search" type="search" name="search" value="{{search}}" class="form-control"
+                       placeholder="{{#str}}search, local_rapidcmi5{{/str}}...">
+                <div class="input-group-append">
+                    <button type="submit" class="btn btn-primary">{{#str}}search, local_rapidcmi5{{/str}}</button>
+                </div>
+            </div>
+            {{#filtered}}<a class="rcmi-clear-search" href="{{{filterurl}}}">{{#str}}updatesclearfilters, local_rapidcmi5{{/str}}</a>{{/filtered}}
+        </form>
+    </div>
+
+    {{#hasprojects}}
+    <form method="post" action="{{{actionurl}}}" id="rcmi-updates-form"
+          data-confirm="{{#str}}updatesconfirm, local_rapidcmi5{{/str}}">
+        <input type="hidden" name="sesskey" value="{{sesskey}}">
+        {{#hasselectable}}
+        <div class="rcmi-toolbar d-flex align-items-center justify-content-between">
+            <div class="form-check">
+                <input id="rcmi-updates-all" type="checkbox" class="form-check-input"
+                       data-action="toggle" data-toggle="master" data-togglegroup="rcmi-updates">
+                <label for="rcmi-updates-all" class="form-check-label">{{#str}}updatesselectall, local_rapidcmi5{{/str}}</label>
+            </div>
+            <button type="submit" class="btn btn-primary" data-action="toggle" data-toggle="action"
+                    data-togglegroup="rcmi-updates"{{^selectedcount}} disabled{{/selectedcount}}>
+                {{#str}}updatesapply, local_rapidcmi5{{/str}}
+                (<span data-region="rcmi-updates-count">{{selectedcount}}</span>)
+            </button>
+        </div>
+        {{/hasselectable}}
+
+        {{#projects}}
+        <section class="rcmi-update-project">
+            <div class="rcmi-update-project-heading">
+                <div class="d-flex flex-wrap align-items-baseline justify-content-between">
+                    <div class="form-check">
+                        {{#selectable}}
+                        <input id="rcmi-updates-project-{{id}}" type="checkbox" class="form-check-input"
+                               data-action="toggle" data-toggle="master" data-togglegroup="{{togglegroup}}">
+                        <label for="rcmi-updates-project-{{id}}" class="form-check-label h5 mb-0">{{{name}}}</label>
+                        {{/selectable}}
+                        {{^selectable}}<h3 class="h5 mb-0">{{{name}}}</h3>{{/selectable}}
+                    </div>
+                    <div class="text-muted">
+                        {{#str}}currentversion, local_rapidcmi5{{/str}}: <strong>{{currentlabel}}</strong>
+                        &middot; <a href="{{{projecturl}}}">{{#str}}updatesviewproject, local_rapidcmi5{{/str}}</a>
+                    </div>
+                </div>
+                {{#revisionmissing}}
+                <div class="alert alert-warning mt-2 mb-0">{{#str}}updatesrevisionmissing, local_rapidcmi5{{/str}}</div>
+                {{/revisionmissing}}
+            </div>
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <caption class="sr-only">{{#str}}managedactivities, local_rapidcmi5{{/str}}: {{{name}}}</caption>
+                        <thead><tr>
+                            <th scope="col" class="w-auto"><span class="sr-only">{{#str}}updatesselect, local_rapidcmi5{{/str}}</span></th>
+                            <th scope="col">{{#str}}activityname, local_rapidcmi5{{/str}}</th>
+                            <th scope="col">{{#str}}course, local_rapidcmi5{{/str}}</th>
+                            <th scope="col">{{#str}}installedversion, local_rapidcmi5{{/str}}</th>
+                        </tr></thead>
+                        <tbody>{{#activities}}<tr>
+                            <td>
+                                {{#selectable}}
+                                <input id="rcmi-updates-deployment-{{deploymentid}}" type="checkbox" name="deploymentids[]"
+                                       value="{{deploymentid}}" data-action="toggle" data-toggle="slave"
+                                       data-togglegroup="{{togglegroup}}"{{#checked}} checked{{/checked}}
+                                       aria-labelledby="rcmi-updates-activity-{{deploymentid}}">
+                                {{/selectable}}
+                            </td>
+                            <td><a id="rcmi-updates-activity-{{deploymentid}}" href="{{{activityurl}}}">{{{activityname}}}</a></td>
+                            <td>{{{coursename}}}</td>
+                            <td>{{installedlabel}} &rarr; <strong>{{currentlabel}}</strong></td>
+                        </tr>{{/activities}}</tbody>
+                    </table>
+                </div>
+        </section>
+        {{/projects}}
+    </form>
+    {{/hasprojects}}
+    {{^hasprojects}}<div class="alert alert-info rcmi-empty-state">{{emptytext}}</div>{{/hasprojects}}
+</div>
+{{#js}}
+require(['jquery', 'core/checkbox-toggleall'], function($, ToggleAll) {
+    ToggleAll.init();
+    var form = $('#rcmi-updates-form');
+    var update = function() {
+        form.find('[data-region="rcmi-updates-count"]').text(form.find('input[name="deploymentids[]"]:checked').length);
+    };
+    // Master checkboxes change their activities without change events, so recount after every click.
+    form.on('click change', 'input[type="checkbox"]', function() {
+        setTimeout(update, 0);
+    });
+    form.on('submit', function(e) {
+        if (!window.confirm(form.data('confirm'))) {
+            e.preventDefault();
+        }
+    });
+});
+{{/js}}

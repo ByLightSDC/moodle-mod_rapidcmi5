@@ -61,7 +61,7 @@ class version_uploader {
         // Checked again by validate(), but refuse before taking the project's upload lock.
         require_capability('local/rapidcmi5:deploy', \context_system::instance());
         $project = $DB->get_record('local_rapidcmi5_projects', ['id' => $projectid], '*', MUST_EXIST);
-        return self::locked($project->identifier, function() use ($projectid, $draftitemid, $label, $notes) {
+        return self::with_project_lock($project->identifier, function() use ($projectid, $draftitemid, $label, $notes) {
             $checked = self::validate($projectid, $draftitemid, $label);
             return self::store_revision($checked->project, $checked->zip, $checked->label, trim($notes));
         });
@@ -81,7 +81,7 @@ class version_uploader {
         global $DB;
         // The identifier decides the lock, and the full checks are repeated under it.
         $identifier = self::validate_package($draftitemid, $label)->identifier;
-        return self::locked($identifier, function() use ($DB, $draftitemid, $label, $notes, $details) {
+        return self::with_project_lock($identifier, function() use ($DB, $draftitemid, $label, $notes, $details) {
             $checked = self::validate_package($draftitemid, $label);
             $name = trim($details['name'] ?? '');
             // Name a new project after its course; an existing project keeps its name unless one is given.
@@ -98,15 +98,21 @@ class version_uploader {
         });
     }
 
-    /** Run an upload holding the lock for its project identifier, so two uploads cannot claim the same label. */
-    private static function locked(string $identifier, callable $upload): \stdClass {
+    /**
+     * Run a change to a project while holding its lock, so uploads and updates to one project never overlap.
+     *
+     * @param string $identifier Project identifier; the project need not exist yet.
+     * @param callable $change The work to do under the lock.
+     * @return mixed Whatever $change returns.
+     */
+    public static function with_project_lock(string $identifier, callable $change): mixed {
         global $DB;
         $lock = \core\lock\lock_config::get_lock_factory('local_rapidcmi5')->get_lock('upload-' . sha1($identifier), 10);
         if (!$lock) {
             throw new \moodle_exception('error:uploadbusy', 'local_rapidcmi5');
         }
         try {
-            return $upload();
+            return $change();
         } finally {
             $lock->release();
         }

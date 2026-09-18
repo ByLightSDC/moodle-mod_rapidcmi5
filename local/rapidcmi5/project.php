@@ -198,7 +198,11 @@ foreach ($deployments as $d) {
     ];
 }
 
+$outdatedcount = count(array_filter($deploymentdata, fn($deployment) => $deployment['isoutdated']));
 $templatedata = [
+    'hasupdates' => $outdatedcount > 0,
+    'updatesbanner' => get_string('projectupdatesbanner', 'local_rapidcmi5', $outdatedcount),
+    'updatesurl' => \local_rapidcmi5\output\updates_page::url(['projectid' => $project->id])->out(false),
     'canuploadversion' => has_capability('local/rapidcmi5:deploy', $context),
     'uploadversionurl' => (new moodle_url('/local/rapidcmi5/upload.php', ['projectid' => $id] + $navigationparams))->out(false),
     'project' => [

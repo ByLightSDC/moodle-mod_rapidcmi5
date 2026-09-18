@@ -156,3 +156,42 @@
 @media (prefers-reduced-motion: reduce) {
     .rapidcmi5-dashboard .rcmi-feature-card { transition: none; }
 }
+
+/* Project heading and installed activities share one surface. */
+.rapidcmi5-dashboard .rcmi-course-project { overflow: hidden; }
+.rapidcmi5-dashboard .rcmi-course-project .card-body { padding-bottom: 1rem; }
+.rapidcmi5-dashboard .rcmi-course-project .card-body p:last-child { margin-bottom: 0; }
+.rapidcmi5-dashboard .rcmi-course-project > .table-responsive { border-top: 1px solid var(--rcmi-border); }
+.rapidcmi5-dashboard .rcmi-course-project .table th,
+.rapidcmi5-dashboard .rcmi-course-project .table td { padding-inline: 1.5rem; }
+
+/* Update groups: a single surface from project heading through activity rows. */
+.rapidcmi5-dashboard .rcmi-update-project {
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--rcmi-border);
+    border-radius: .65rem;
+    background: var(--rcmi-surface);
+    overflow: hidden;
+}
+.rapidcmi5-dashboard .rcmi-update-project-heading {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--rcmi-border);
+}
+.rapidcmi5-dashboard .rcmi-update-project-heading > .d-flex { gap: .75rem 1.5rem; }
+.rapidcmi5-dashboard .rcmi-update-project-heading .form-check { margin-bottom: 0; }
+.rapidcmi5-dashboard .rcmi-update-project .table th { background: transparent; }
+.rapidcmi5-dashboard .rcmi-update-project .table th:first-child,
+.rapidcmi5-dashboard .rcmi-update-project .table td:first-child {
+    width: 3.5rem;
+    padding-left: 1.5rem;
+    padding-right: .75rem;
+}
+.rapidcmi5-dashboard .rcmi-update-project .table th:last-child,
+.rapidcmi5-dashboard .rcmi-update-project .table td:last-child { padding-right: 1.5rem; }
+.rapidcmi5-dashboard .rcmi-update-project .table tbody tr:first-child td { border-top: 0; }
+.rapidcmi5-dashboard .rcmi-update-project input[type="checkbox"] { accent-color: var(--rcmi-accent); }
+@media (max-width: 767px) {
+    .rapidcmi5-dashboard .rcmi-update-project-heading { padding: 1.1rem; }
+    .rapidcmi5-dashboard .rcmi-update-project .table th:first-child,
+    .rapidcmi5-dashboard .rcmi-update-project .table td:first-child { padding-left: 1.1rem; }
+}

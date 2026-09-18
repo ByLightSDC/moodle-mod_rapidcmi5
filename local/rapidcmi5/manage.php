@@ -24,6 +24,9 @@
 
 require_once(__DIR__ . '/../../config.php');
 
+use local_rapidcmi5\course_browser;
+use local_rapidcmi5\dashboard;
+
 require_login();
 $context = context_system::instance();
 
@@ -37,45 +40,16 @@ $PAGE->set_pagelayout('admin');
 $PAGE->set_title(get_string('manage_dashboard', 'local_rapidcmi5'));
 $PAGE->set_heading(get_string('manage_dashboard', 'local_rapidcmi5'));
 
-echo $OUTPUT->header();
-
-$items = [
-    [
-        'url'   => new moodle_url('/local/rapidcmi5/index.php'),
-        'icon'  => 'i/settings',
-        'title' => get_string('projects', 'local_rapidcmi5'),
-        'desc'  => get_string('projects_desc', 'local_rapidcmi5'),
-    ],
-    [
-        'url'   => new moodle_url('/local/rapidcmi5/player.php'),
-        'icon'  => 'i/settings',
-        'title' => get_string('playerversions', 'local_rapidcmi5'),
-        'desc'  => get_string('playerversions_desc', 'local_rapidcmi5'),
-    ],
-    [
-        'url'   => new moodle_url('/local/rapidcmi5/unmanaged.php'),
-        'icon'  => 'i/settings',
-        'title' => get_string('unmanagedactivities', 'local_rapidcmi5'),
-        'desc'  => get_string('unmanagedactivities_desc', 'local_rapidcmi5'),
-    ],
+// Counts are deferred so that adding a card here does not add a query until it is displayed.
+$cards = [
+    dashboard::overview_card('index.php', 'projects', 'i/folder',
+        fn() => $DB->count_records('local_rapidcmi5_projects'), 'dashboardprojectcount'),
+    dashboard::overview_card('courses.php', 'projectsbycourse', 'i/course',
+        fn() => course_browser::count_courses(), 'dashboardcoursecount'),
+    dashboard::overview_card('player.php', 'playerversions', 'i/settings',
+        fn() => $DB->count_records('local_rapidcmi5_player_versions'), 'dashboardplayercount'),
+    dashboard::overview_card('unmanaged.php', 'unmanagedactivities', 'i/search'),
 ];
-
-echo html_writer::start_div('container-fluid mt-3');
-echo html_writer::start_div('row');
-foreach ($items as $item) {
-    echo html_writer::start_div('col-sm-6 col-lg-4 col-xl-3 mb-3');
-    echo html_writer::start_tag('a', [
-        'href'  => $item['url']->out(false),
-        'class' => 'card h-100 text-decoration-none',
-    ]);
-    echo html_writer::start_div('card-body d-flex flex-column');
-    echo html_writer::tag('h5', $item['title'], ['class' => 'card-title']);
-    echo html_writer::tag('p', $item['desc'], ['class' => 'card-text text-muted small']);
-    echo html_writer::end_div();
-    echo html_writer::end_tag('a');
-    echo html_writer::end_div();
-}
-echo html_writer::end_div();
-echo html_writer::end_div();
-
-echo $OUTPUT->footer();
+echo dashboard::header('overview', 'dashboardintro');
+echo $OUTPUT->render_from_template('local_rapidcmi5/dashboard_overview', ['cards' => $cards]);
+echo dashboard::footer();

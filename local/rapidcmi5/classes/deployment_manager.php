@@ -138,11 +138,16 @@ class deployment_manager {
         // Set the library package source (field names must match what cmi5_add_instance expects).
         $moduleinfo->packagesource = 'library';
         $moduleinfo->packageid = $libraryversion->packageid;
+        $moduleinfo->profileid = $libraryversion->profileid ?? 0;
 
         // Use Moodle's standard module creation.
         // cmi5_add_instance will resolve the latest version, set packageversionid,
         // copy AU structure, and increment usage count.
         $moduleinfo = add_moduleinfo($moduleinfo, $course);
+        // The module defaults to the library's latest revision; honor the requested project revision.
+        if ((int) $DB->get_field('cmi5', 'packageversionid', ['id' => $moduleinfo->instance]) !== $libraryversionid) {
+            \mod_cmi5\content_library::sync_activity_to_version($moduleinfo->instance, $libraryversionid);
+        }
 
         return $moduleinfo->coursemodule;
     }

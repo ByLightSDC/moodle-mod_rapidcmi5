@@ -112,7 +112,8 @@ class deploy_package extends external_api {
             $params['commit_hash'],
             $params['build_timestamp'],
             $libraryversion->sha256hash ?? '',
-            $params['release_notes']
+            $params['release_notes'],
+            $libraryversionid
         );
 
         // 4. Get previous version string.

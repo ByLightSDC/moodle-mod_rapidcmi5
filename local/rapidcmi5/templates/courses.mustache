@@ -1,0 +1,64 @@
+{{!
+    @template local_rapidcmi5/courses
+    Courses containing managed projects, and the projects within a selected course.
+}}
+<div class="local-rapidcmi5-courses">
+    {{#isdetail}}
+        {{> local_rapidcmi5/detail_navigation }}
+        {{#projects}}
+        <div class="card mb-3">
+            <div class="card-body">
+                <h3 class="h5"><a href="{{{projecturl}}}">{{{name}}}</a></h3>
+                <p class="text-break"><code>{{identifier}}</code></p>
+                <p>{{#str}}currentversion, local_rapidcmi5{{/str}}: <strong>{{latestversion}}</strong></p>
+                <div class="rcmi-table-panel table-responsive">
+                    <table class="table mb-0">
+                        <caption class="sr-only">{{#str}}managedactivities, local_rapidcmi5{{/str}}: {{{name}}}</caption>
+                        <thead><tr>
+                            <th scope="col">{{#str}}activityname, local_rapidcmi5{{/str}}</th>
+                            <th scope="col">{{#str}}installedversion, local_rapidcmi5{{/str}}</th>
+                            <th scope="col">{{#str}}versionstatus, local_rapidcmi5{{/str}}</th>
+                        </tr></thead>
+                        <tbody>{{#activities}}<tr>
+                            <td><a href="{{{activityurl}}}">{{{activityname}}}</a></td>
+                            <td>{{versionnumber}}</td>
+                            <td><span class="badge {{#isoutdated}}badge-warning{{/isoutdated}}{{^isoutdated}}badge-secondary{{/isoutdated}}">{{status}}</span></td>
+                        </tr>{{/activities}}</tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {{/projects}}
+        {{^hasprojects}}<div class="alert alert-info rcmi-empty-state">{{#str}}nocourseprojects, local_rapidcmi5{{/str}}</div>{{/hasprojects}}
+    {{/isdetail}}
+    {{^isdetail}}
+        <div class="rcmi-toolbar">
+        <form method="get" action="{{{listurl}}}">
+            <label class="sr-only" for="managed-course-search">{{#str}}searchmanagedcourses, local_rapidcmi5{{/str}}</label>
+            <div class="input-group">
+                <input id="managed-course-search" type="search" name="search" value="{{search}}" class="form-control" placeholder="{{#str}}search, local_rapidcmi5{{/str}}...">
+                <div class="input-group-append"><button type="submit" class="btn btn-primary">{{#str}}search, local_rapidcmi5{{/str}}</button></div>
+            </div>
+            {{#search}}<a class="rcmi-clear-search" href="{{{listurl}}}">{{#str}}clearcoursesearch, local_rapidcmi5{{/str}}</a>{{/search}}
+        </form>
+        </div>
+        <p>{{#str}}managedcoursecount, local_rapidcmi5{{/str}}: {{total}}</p>
+        {{#hascourses}}
+        <div class="rcmi-table-panel table-responsive">
+            <table class="table table-striped">
+                <caption class="sr-only">{{#str}}projectsbycourse, local_rapidcmi5{{/str}}</caption>
+                <thead><tr>
+                    <th scope="col">{{#str}}course, local_rapidcmi5{{/str}}</th>
+                    <th scope="col">{{#str}}managedprojectcount, local_rapidcmi5{{/str}}</th>
+                    <th scope="col">{{#str}}managedactivities, local_rapidcmi5{{/str}}</th>
+                </tr></thead>
+                <tbody>{{#courses}}<tr>
+                    <td><a href="{{{detailurl}}}">{{{fullname}}}</a><div class="small text-muted">{{{shortname}}}</div></td>
+                    <td>{{projectcount}}</td><td>{{activitycount}}</td>
+                </tr>{{/courses}}</tbody>
+            </table>
+        </div>
+        {{/hascourses}}
+        {{^hascourses}}<div class="alert alert-info rcmi-empty-state">{{emptytext}}</div>{{/hascourses}}
+    {{/isdetail}}
+</div>

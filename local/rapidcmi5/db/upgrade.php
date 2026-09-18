@@ -38,5 +38,16 @@ function xmldb_local_rapidcmi5_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026030200, 'local', 'rapidcmi5');
     }
 
+    if ($oldversion < 2026091700) {
+        $table = new xmldb_table('local_rapidcmi5_versions');
+        $field = new xmldb_field('libraryversionid', XMLDB_TYPE_INTEGER, '10', null,
+            null, null, null, 'packageid');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        // Legacy records are resolved by package and hash when unambiguous.
+        upgrade_plugin_savepoint(true, 2026091700, 'local', 'rapidcmi5');
+    }
+
     return true;
 }

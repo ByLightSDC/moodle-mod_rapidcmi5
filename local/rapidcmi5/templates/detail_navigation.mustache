@@ -1,0 +1,10 @@
+{{!
+    @template local_rapidcmi5/detail_navigation
+    Shared back navigation and optional course action for detail pages.
+}}
+<div class="rcmi-toolbar">
+    <a href="{{{backurl}}}" class="btn btn-outline-secondary">&laquo; {{backlabel}}</a>
+    {{#courseurl}}
+    <a href="{{{courseurl}}}" class="btn btn-outline-primary">{{#str}}opencourse, local_rapidcmi5{{/str}}</a>
+    {{/courseurl}}
+</div>

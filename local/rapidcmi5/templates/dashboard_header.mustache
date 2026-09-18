@@ -1,0 +1,13 @@
+{{!
+    @template local_rapidcmi5/dashboard_header
+    Shared introduction and navigation for management pages.
+}}
+<div class="rcmi-intro">
+    <span class="rcmi-eyebrow">RapidCMI5</span>
+    <p class="rcmi-description">{{description}}</p>
+</div>
+<nav class="rcmi-navigation" aria-label="{{#str}}dashboardnavigation, local_rapidcmi5{{/str}}">
+    {{#navigation}}
+    <a class="rcmi-nav-link{{#active}} is-active{{/active}}" href="{{{url}}}"{{#active}} aria-current="page"{{/active}}>{{label}}</a>
+    {{/navigation}}
+</nav>

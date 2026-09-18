@@ -27,7 +27,10 @@ $PAGE->set_heading(get_string('projects', 'local_rapidcmi5'));
 $PAGE->set_pagelayout('admin');
 
 $search = optional_param('search', '', PARAM_TEXT);
-$page = optional_param('page', 0, PARAM_INT);
+$page = max(0, optional_param('page', 0, PARAM_INT));
+$PAGE->set_url(new moodle_url('/local/rapidcmi5/index.php', ['search' => $search, 'page' => $page]));
+$PAGE->navbar->add(get_string('manage_dashboard', 'local_rapidcmi5'), new moodle_url('/local/rapidcmi5/manage.php'));
+$PAGE->navbar->add(get_string('projects', 'local_rapidcmi5'));
 $perpage = 25;
 
 $projects = \local_rapidcmi5\project_manager::list_projects($search, $page * $perpage, $perpage);
@@ -51,11 +54,13 @@ foreach ($projects as $project) {
         'gitrepourl' => $project->gitrepourl ?? '',
         'hasgitrepo' => !empty($project->gitrepourl),
         'timemodified' => userdate($project->timemodified),
-        'detailurl' => (new moodle_url('/local/rapidcmi5/project.php', ['id' => $project->id]))->out(false),
+        'detailurl' => (new moodle_url('/local/rapidcmi5/project.php', ['id' => $project->id,
+            'search' => $search, 'page' => $page]))->out(false),
     ];
 }
 
 $templatedata = [
+    'coursesurl' => (new moodle_url('/local/rapidcmi5/courses.php'))->out(false),
     'projects' => $projectdata,
     'hasprojects' => !empty($projectdata),
     'search' => $search,
@@ -63,15 +68,10 @@ $templatedata = [
     'uploadurl' => (new moodle_url('/local/rapidcmi5/upload.php'))->out(false),
 ];
 
-echo $OUTPUT->header();
-echo html_writer::link(
-    new moodle_url('/local/rapidcmi5/manage.php'),
-    get_string('backtomanagement', 'local_rapidcmi5'),
-    ['class' => 'btn btn-secondary mb-3']
-);
+echo \local_rapidcmi5\dashboard::header('projects', 'projects_desc');
 echo $OUTPUT->render_from_template('local_rapidcmi5/projects_list', $templatedata);
 
 // Paging bar.
 echo $OUTPUT->paging_bar($total, $page, $perpage, new moodle_url('/local/rapidcmi5/index.php', ['search' => $search]));
 
-echo $OUTPUT->footer();
+echo \local_rapidcmi5\dashboard::footer();

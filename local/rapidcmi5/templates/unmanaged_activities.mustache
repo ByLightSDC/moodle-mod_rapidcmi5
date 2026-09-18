@@ -4,17 +4,17 @@
     Template for the unmanaged RapidCMI5 activities scanner page.
 }}
 <div class="local-rapidcmi5-unmanaged">
-    <p><a href="{{{projectsurl}}}">&laquo; {{#str}}projects, local_rapidcmi5{{/str}}</a></p>
 
     {{#hasactivities}}
+    <div class="rcmi-table-panel table-responsive">
     <table class="table table-striped">
         <thead>
             <tr>
-                <th>{{#str}}course, local_rapidcmi5{{/str}}</th>
-                <th>{{#str}}activityname, local_rapidcmi5{{/str}}</th>
-                <th>{{#str}}playerversion, local_rapidcmi5{{/str}}</th>
-                <th>{{#str}}aucount, local_rapidcmi5{{/str}}</th>
-                <th>{{#str}}actions, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}course, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}activityname, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}playerversion, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}aucount, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}actions, local_rapidcmi5{{/str}}</th>
             </tr>
         </thead>
         <tbody>
@@ -25,15 +25,20 @@
                 <td>{{playerversion}}</td>
                 <td>{{aucount}}</td>
                 <td>
+                    {{#canmanage}}
+                    <a class="btn btn-sm btn-primary mr-2" href="{{{manageurl}}}">
+                        {{#str}}addtomanaged, local_rapidcmi5{{/str}}
+                    </a>
+                    {{/canmanage}}
                     {{#hasplayerversions}}
-                    <form method="post" action="{{{actionurl}}}" style="display:inline"
+                    <form method="post" action="{{{actionurl}}}" class="rcmi-inline-form"
                           onsubmit="return confirm('{{#str}}upgradeplayerconfirm, local_rapidcmi5{{/str}}');">
                         <input type="hidden" name="action" value="upgradeplayer">
                         <input type="hidden" name="cmid" value="{{cmid}}">
                         <input type="hidden" name="sesskey" value="{{sesskey}}">
                         <input type="hidden" name="returnurl" value="{{{returnurl}}}">
-                        <div class="d-inline-flex align-items-center">
-                            <select name="playerversionid" class="custom-select custom-select-sm mr-1">
+                        <div class="rcmi-action-group d-inline-flex align-items-center">
+                            <select aria-label="{{#str}}playerversion, local_rapidcmi5{{/str}}" name="playerversionid" class="custom-select custom-select-sm mr-1">
                                 {{#playeroptions}}
                                 <option value="{{id}}">{{label}}</option>
                                 {{/playeroptions}}
@@ -49,9 +54,10 @@
             {{/activities}}
         </tbody>
     </table>
+    </div>
     {{/hasactivities}}
 
     {{^hasactivities}}
-    <div class="alert alert-info">{{#str}}nounmanaged, local_rapidcmi5{{/str}}</div>
+    <div class="alert alert-info rcmi-empty-state">{{#str}}nounmanaged, local_rapidcmi5{{/str}}</div>
     {{/hasactivities}}
 </div>

@@ -4,7 +4,7 @@
     Template for the RapidCMI5 project detail page.
 }}
 <div class="local-rapidcmi5-project-detail">
-    <p><a href="{{{backurl}}}">&laquo; {{#str}}projects, local_rapidcmi5{{/str}}</a></p>
+    {{> local_rapidcmi5/detail_navigation }}
 
     {{#packagemissing}}
     <div class="alert alert-warning">
@@ -35,28 +35,36 @@
                 <dt class="col-sm-3">{{#str}}lastmodified, local_rapidcmi5{{/str}}</dt>
                 <dd class="col-sm-9">{{project.timemodified}}</dd>
             </dl>
-            <form method="post" action="{{{actionurl}}}" style="display:inline"
+            <form method="post" action="{{{actionurl}}}" class="rcmi-inline-form"
                   onsubmit="return confirm('{{#str}}confirmdeleteproject, local_rapidcmi5{{/str}}');">
                 <input type="hidden" name="action" value="deleteproject">
                 <input type="hidden" name="projectid" value="{{project.id}}">
                 <input type="hidden" name="sesskey" value="{{sesskey}}">
-                <button type="submit" class="btn btn-sm btn-danger">
+                <button type="submit" class="btn btn-sm btn-outline-danger">
                     {{#str}}deleteproject, local_rapidcmi5{{/str}}
                 </button>
             </form>
         </div>
     </div>
 
-    <h4>{{#str}}versions, local_rapidcmi5{{/str}}</h4>
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
+        <h4 class="mb-2">{{#str}}versions, local_rapidcmi5{{/str}}</h4>
+        {{#canuploadversion}}
+        <a href="{{{uploadversionurl}}}" class="btn btn-primary mb-2">
+            {{#str}}uploadnewversion, local_rapidcmi5{{/str}}
+        </a>
+        {{/canuploadversion}}
+    </div>
     {{#hasversions}}
+    <div class="rcmi-table-panel table-responsive">
     <table class="table table-striped mb-4">
         <thead>
             <tr>
-                <th>{{#str}}version, local_rapidcmi5{{/str}}</th>
-                <th>{{#str}}commithash, local_rapidcmi5{{/str}}</th>
-                <th>{{#str}}buildtimestamp, local_rapidcmi5{{/str}}</th>
-                <th>{{#str}}player, local_rapidcmi5{{/str}}</th>
-                <th>{{#str}}created, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}version, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}commithash, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}buildtimestamp, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}player, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}created, local_rapidcmi5{{/str}}</th>
             </tr>
         </thead>
         <tbody>
@@ -64,6 +72,7 @@
             <tr{{#iscurrent}} class="table-active"{{/iscurrent}}>
                 <td>
                     {{versionnumber}}
+                    {{#hasreleasenotes}}<div class="small text-muted">{{releasenotes}}</div>{{/hasreleasenotes}}
                     {{#iscurrent}}<span class="badge badge-success">{{#str}}currentversion, local_rapidcmi5{{/str}}</span>{{/iscurrent}}
                 </td>
                 <td>{{#hascommit}}<code>{{shortcommit}}</code>{{/hascommit}}</td>
@@ -71,14 +80,14 @@
                 <td>
                     {{playerversion}}
                     {{#hasplayerversions}}
-                    <form method="post" action="{{{actionurl}}}" style="display:inline"
+                    <form method="post" action="{{{actionurl}}}" class="rcmi-inline-form"
                           onsubmit="return confirm('{{#str}}upgradeplayerconfirm, local_rapidcmi5{{/str}}');">
                         <input type="hidden" name="action" value="setlibraryplayer">
                         <input type="hidden" name="libraryversionid" value="{{libraryversionid}}">
                         <input type="hidden" name="sesskey" value="{{sesskey}}">
                         <input type="hidden" name="returnurl" value="{{{returnurl}}}">
-                        <div class="d-inline-flex align-items-center">
-                            <select name="playerversionid" class="custom-select custom-select-sm mr-1">
+                        <div class="rcmi-action-group d-inline-flex align-items-center">
+                            <select aria-label="{{#str}}playerversion, local_rapidcmi5{{/str}}" name="playerversionid" class="custom-select custom-select-sm mr-1">
                                 {{#playeroptions}}
                                 <option value="{{id}}">{{label}}</option>
                                 {{/playeroptions}}
@@ -95,6 +104,7 @@
             {{/versions}}
         </tbody>
     </table>
+    </div>
     {{/hasversions}}
     {{^hasversions}}
     <p class="text-muted">{{#str}}noversions, local_rapidcmi5{{/str}}</p>
@@ -102,14 +112,15 @@
 
     <h4>{{#str}}deployments, local_rapidcmi5{{/str}}</h4>
     {{#hasdeployments}}
+    <div class="rcmi-table-panel table-responsive">
     <table class="table table-striped">
         <thead>
             <tr>
-                <th>{{#str}}course, local_rapidcmi5{{/str}}</th>
-                <th>{{#str}}version, local_rapidcmi5{{/str}}</th>
-                <th>{{#str}}player, local_rapidcmi5{{/str}}</th>
-                <th>{{#str}}lastmodified, local_rapidcmi5{{/str}}</th>
-                <th>{{#str}}actions, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}course, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}version, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}player, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}lastmodified, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}actions, local_rapidcmi5{{/str}}</th>
             </tr>
         </thead>
         <tbody>
@@ -131,14 +142,14 @@
                 <td>{{timemodified}}</td>
                 <td>
                     {{#hasplayerversions}}
-                    <form method="post" action="{{{actionurl}}}" style="display:inline"
+                    <form method="post" action="{{{actionurl}}}" class="rcmi-inline-form"
                           onsubmit="return confirm('{{#str}}upgradeplayerconfirm, local_rapidcmi5{{/str}}');">
                         <input type="hidden" name="action" value="upgradeplayer">
                         <input type="hidden" name="deploymentid" value="{{id}}">
                         <input type="hidden" name="sesskey" value="{{sesskey}}">
                         <input type="hidden" name="returnurl" value="{{{returnurl}}}">
-                        <div class="d-inline-flex align-items-center mb-1">
-                            <select name="playerversionid" class="custom-select custom-select-sm mr-1">
+                        <div class="rcmi-action-group d-inline-flex align-items-center mb-1">
+                            <select aria-label="{{#str}}playerversion, local_rapidcmi5{{/str}}" name="playerversionid" class="custom-select custom-select-sm mr-1">
                                 {{#playeroptions}}
                                 <option value="{{id}}">{{label}}</option>
                                 {{/playeroptions}}
@@ -150,7 +161,7 @@
                     </form>
                     {{/hasplayerversions}}
                     {{#hascontentupdate}}
-                    <form method="post" action="{{{actionurl}}}" style="display:inline"
+                    <form method="post" action="{{{actionurl}}}" class="rcmi-inline-form"
                           onsubmit="return confirm('{{#str}}updatecontentconfirm, local_rapidcmi5{{/str}}');">
                         <input type="hidden" name="action" value="updatecontent">
                         <input type="hidden" name="deploymentid" value="{{id}}">
@@ -166,6 +177,7 @@
             {{/deployments}}
         </tbody>
     </table>
+    </div>
     {{/hasdeployments}}
     {{^hasdeployments}}
     <p class="text-muted">{{#str}}nodeployments, local_rapidcmi5{{/str}}</p>

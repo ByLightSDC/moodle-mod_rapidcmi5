@@ -38,5 +38,46 @@ function xmldb_local_rapidcmi5_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026030200, 'local', 'rapidcmi5');
     }
 
+    if ($oldversion < 2026091700) {
+        $table = new xmldb_table('local_rapidcmi5_versions');
+        $field = new xmldb_field('libraryversionid', XMLDB_TYPE_INTEGER, '10', null,
+            null, null, null, 'packageid');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+        // Legacy records are resolved by package and hash when unambiguous.
+        upgrade_plugin_savepoint(true, 2026091700, 'local', 'rapidcmi5');
+    }
+
+    if ($oldversion < 2026091800) {
+        // Player manifests used to list only unhashed files, and wrapped ZIPs were stored with none,
+        // so Set player removed the old bundles without installing new ones. Rebuild from each ZIP.
+        foreach ($DB->get_fieldset_select('local_rapidcmi5_player_versions', 'id', '1 = 1') as $playerversionid) {
+            try {
+                \local_rapidcmi5\player_manager::rebuild_player_manifest((int) $playerversionid);
+            } catch (\moodle_exception $e) {
+                // An incomplete player keeps its manifest; Set player now refuses it instead of breaking packages.
+                mtrace("Player version {$playerversionid} could not be rebuilt: " . $e->getMessage());
+            }
+        }
+        upgrade_plugin_savepoint(true, 2026091800, 'local', 'rapidcmi5');
+    }
+
+    if ($oldversion < 2026091801) {
+        // Activities added from the mod_cmi5 activity library used to stay untracked; link existing ones.
+        $cmids = $DB->get_fieldset_sql("SELECT cm.id
+                                          FROM {course_modules} cm
+                                          JOIN {modules} m ON m.id = cm.module AND m.name = 'cmi5'
+                                          JOIN {cmi5} a ON a.id = cm.instance
+                                     LEFT JOIN {local_rapidcmi5_deployments} d ON d.cmid = cm.id
+                                         WHERE a.packageversionid IS NOT NULL AND d.id IS NULL
+                                               AND cm.deletioninprogress = 0
+                                      ORDER BY cm.id");
+        foreach ($cmids as $cmid) {
+            \local_rapidcmi5\deployment_manager::link_library_activity((int) $cmid);
+        }
+        upgrade_plugin_savepoint(true, 2026091801, 'local', 'rapidcmi5');
+    }
+
     return true;
 }

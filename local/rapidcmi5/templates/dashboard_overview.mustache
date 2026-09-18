@@ -1,0 +1,15 @@
+{{!
+    @template local_rapidcmi5/dashboard_overview
+    Management overview using the shared dashboard card layout.
+}}
+<div class="rcmi-card-grid">
+    {{#cards}}
+    <a class="rcmi-feature-card" href="{{{url}}}">
+        <span class="rcmi-card-icon" aria-hidden="true">{{{icon}}}</span>
+        <h2 class="h5">{{title}}</h2>
+        <p class="rcmi-card-description">{{description}}</p>
+        {{#hascount}}<p class="rcmi-card-metric"><strong>{{count}}</strong> <span>{{countlabel}}</span></p>{{/hascount}}
+        <span class="rcmi-card-link">{{#str}}dashboardexplore, local_rapidcmi5{{/str}} <span aria-hidden="true">&rarr;</span></span>
+    </a>
+    {{/cards}}
+</div>

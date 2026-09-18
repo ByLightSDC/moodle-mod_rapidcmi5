@@ -149,17 +149,10 @@ switch ($action) {
 
         $latestver = $DB->get_record('local_rapidcmi5_versions', ['id' => $project->currentversionid], '*', MUST_EXIST);
 
-        // Get the library version ID from the rapidcmi5 version's package.
-        // The version record stores the content library packageid; get its latest version.
-        $libraryversion = $DB->get_record_sql(
-            "SELECT * FROM {cmi5_package_versions}
-             WHERE packageid = :packageid
-             ORDER BY timecreated DESC LIMIT 1",
-            ['packageid' => $latestver->packageid]
-        );
+        $libraryversion = \local_rapidcmi5\project_manager::get_library_version($latestver);
 
         if (!$libraryversion) {
-            throw new moodle_exception('error:projectnotfound', 'local_rapidcmi5');
+            throw new moodle_exception('error:libraryrevisionmissing', 'local_rapidcmi5');
         }
 
         // Use deployment_manager to update the activity.

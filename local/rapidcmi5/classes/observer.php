@@ -19,9 +19,27 @@ namespace local_rapidcmi5;
 defined('MOODLE_INTERNAL') || die();
 
 /**
- * Event observer for cleaning up deployment records.
+ * Event observers that keep deployment records in step with cmi5 activities.
  */
 class observer {
+
+    /**
+     * Track cmi5 activities created or changed outside RapidCMI5, e.g. from the mod_cmi5 activity library.
+     *
+     * Never interrupts saving the activity: a failure only means the activity stays unmanaged.
+     *
+     * @param \core\event\course_module_created|\core\event\course_module_updated $event
+     */
+    public static function course_module_saved(\core\event\base $event): void {
+        if (($event->other['modulename'] ?? '') !== 'cmi5') {
+            return;
+        }
+        try {
+            deployment_manager::link_library_activity((int) $event->objectid);
+        } catch (\Throwable $e) {
+            debugging('RapidCMI5 could not track activity ' . $event->objectid . ': ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
+    }
 
     /**
      * Handle course module deletion.

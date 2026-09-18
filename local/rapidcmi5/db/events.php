@@ -18,6 +18,14 @@ defined('MOODLE_INTERNAL') || die();
 
 $observers = [
     [
+        'eventname' => '\core\event\course_module_created',
+        'callback' => '\local_rapidcmi5\observer::course_module_saved',
+    ],
+    [
+        'eventname' => '\core\event\course_module_updated',
+        'callback' => '\local_rapidcmi5\observer::course_module_saved',
+    ],
+    [
         'eventname' => '\core\event\course_module_deleted',
         'callback' => '\local_rapidcmi5\observer::course_module_deleted',
     ],

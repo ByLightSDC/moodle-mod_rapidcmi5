@@ -74,6 +74,9 @@ foreach ($unmanagedcms as $row) {
 
     $activities[] = [
         'cmid' => $row->cmid,
+        'canmanage' => has_capability('local/rapidcmi5:deploy', $context) &&
+            has_capability('moodle/course:manageactivities', \context_module::instance($row->cmid)),
+        'manageurl' => (new moodle_url('/local/rapidcmi5/adopt.php', ['cmid' => $row->cmid]))->out(false),
         'coursename' => $row->coursename,
         'activityname' => $row->activityname,
         'playerversion' => $currentplayer,
@@ -90,14 +93,8 @@ foreach ($unmanagedcms as $row) {
 $templatedata = [
     'activities' => $activities,
     'hasactivities' => !empty($activities),
-    'projectsurl' => (new moodle_url('/local/rapidcmi5/index.php'))->out(false),
 ];
 
-echo $OUTPUT->header();
-echo html_writer::link(
-    new moodle_url('/local/rapidcmi5/manage.php'),
-    get_string('backtomanagement', 'local_rapidcmi5'),
-    ['class' => 'btn btn-secondary mb-3']
-);
+echo \local_rapidcmi5\dashboard::header('unmanaged', 'unmanagedactivities_desc');
 echo $OUTPUT->render_from_template('local_rapidcmi5/unmanaged_activities', $templatedata);
-echo $OUTPUT->footer();
+echo \local_rapidcmi5\dashboard::footer();

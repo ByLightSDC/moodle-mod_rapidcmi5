@@ -45,11 +45,13 @@ $string['updatedproject'] = 'Project updated';
 $string['error:projectnotfound'] = 'Project not found';
 $string['error:versionexists'] = 'Version {$a} already exists for this project';
 $string['error:coursenotfound'] = 'Course not found: {$a}';
+$string['error:deployfailed'] = 'Could not deploy to course {$a->courseid}: {$a->message}';
 $string['error:mod_cmi5_required'] = 'The mod_cmi5 plugin is required but not installed';
 $string['error:playerversionexists'] = 'Player version {$a} already exists';
 $string['error:nofileindraft'] = 'No file found in draft area';
-$string['error:invalidmanifest'] = 'Invalid player-manifest.json: missing files list';
+$string['error:invalidmanifest'] = 'The player-manifest.json in this player ZIP is not valid JSON.';
 $string['error:playerfilenotfound'] = 'Player ZIP file not found in storage';
+$string['error:invalidplayerpackage'] = 'This player ZIP does not contain a complete player (index.html, a main.*.js bundle and every file its manifest lists). No packages were changed.';
 $string['playerversions'] = 'Player Versions';
 $string['playerversion'] = 'Player version';
 $string['uploadplayer'] = 'Upload player';
@@ -73,6 +75,7 @@ $string['packageuploaded'] = 'Package uploaded successfully';
 $string['deployedtocourse'] = 'Deployed to course {$a}';
 $string['error:invalidcourseids'] = 'Course IDs must be comma-separated numbers';
 $string['projectidentifier_help'] = 'A stable identifier for the project (e.g. the courseId IRI from cmi5.xml). This links uploads to the same project across versions.';
+$string['projectname_help'] = 'Optional. The project is identified by the course ID in the package\'s cmi5.xml, so uploads of the same course always join the same project. Leave blank to use the course title for a new project, or to keep an existing project\'s name.';
 $string['uploadplayerversion'] = 'Upload player version';
 $string['playerfile'] = 'Player ZIP file';
 $string['playeruploaded'] = 'Player version {$a} uploaded successfully';
@@ -98,8 +101,64 @@ $string['description'] = 'Description';
 $string['course'] = 'Course';
 $string['search'] = 'Search';
 $string['manage_dashboard'] = 'RapidCMI5 Management';
-$string['backtomanagement'] = '← Back to RapidCMI5 Management';
-$string['backtoprojects'] = '← Back to Projects';
 $string['projects_desc'] = 'Create and manage RapidCMI5 projects and deploy packages to courses.';
 $string['playerversions_desc'] = 'Upload and manage cmi5 player versions used by deployed activities.';
 $string['unmanagedactivities_desc'] = 'View cmi5 activities not currently linked to a RapidCMI5 project.';
+
+// Adopt existing activities.
+$string['addtomanaged'] = 'Add to managed projects';
+$string['addtomanagedconfirm'] = 'Add “{$a->activity}” to project “{$a->project}” ({$a->identifier})? An existing project with this identifier will be reused. The activity and learner progress will be preserved. Locally uploaded content will also be copied into the content library. Future project deployments to this course will update this activity.';
+$string['activitymanaged'] = 'The activity is now tracked in managed projects.';
+$string['error:notrapidcmi5'] = 'This activity does not contain detectable RapidCMI5 content.';
+$string['error:invalidprojectidentifier'] = 'The content must have a consistent course identifier of at most 255 characters before it can be managed.';
+$string['error:managedcourseconflict'] = 'This project already manages another activity in this course. Only one activity per project per course can be managed.';
+$string['error:adoptionbusy'] = 'Another activity is being added to managed projects. Please try again.';
+$string['error:adoptionarchive'] = 'The activity content could not be copied into a package. No management records were saved.';
+
+// Upload project revisions.
+$string['uploadnewversion'] = 'Upload new version';
+$string['uploadversionnotice'] = 'Upload a RapidCMI5 ZIP with the same course identifier as this project. This becomes the current project version. Existing activities stay on their installed version until you choose Update content.';
+$string['versionuploaded'] = 'New project version uploaded. Existing activities have not been changed.';
+$string['error:invalidversionlabel'] = 'Enter a version label between 1 and 64 characters.';
+$string['error:singlepackage'] = 'Choose one cmi5 package ZIP.';
+$string['error:projectmismatch'] = 'This package has a different course identifier. Upload a package built from this project.';
+$string['error:notrapidpackage'] = 'This package does not contain detectable RapidCMI5 content.';
+$string['error:invalidzip'] = 'This file could not be read as a ZIP archive. Upload a valid cmi5 package ZIP.';
+$string['error:uploadbusy'] = 'Another version is being uploaded to this project. Please try again.';
+$string['error:libraryrevisionmissing'] = 'The exact library revision for this project version is missing or ambiguous. Upload a new project version before updating activities.';
+
+// Browse managed projects by Moodle course (class).
+$string['projectsbycourse'] = 'Projects by course';
+$string['projectsbycourse_desc'] = 'Browse Moodle courses (classes) and see the managed RapidCMI5 projects and activities in each course.';
+$string['searchmanagedcourses'] = 'Search by course name or short name';
+$string['clearcoursesearch'] = 'Clear search';
+$string['managedcoursecount'] = 'Matching courses';
+$string['managedprojectcount'] = 'Managed projects';
+$string['managedactivities'] = 'Managed activities';
+$string['opencourse'] = 'Open Moodle course';
+$string['installedversion'] = 'Installed version';
+$string['versionstatus'] = 'Version status';
+$string['olderprojectversion'] = 'Update available';
+$string['unknownversion'] = 'Unknown version';
+$string['nomanagedcourses'] = 'No courses have managed RapidCMI5 activities yet. Add activities to managed projects from the Unmanaged activities page.';
+$string['nomatchingmanagedcourses'] = 'No courses with managed RapidCMI5 activities match your search.';
+$string['nocourseprojects'] = 'This course has no managed RapidCMI5 projects.';
+
+// Shared dashboard presentation.
+$string['dashboardoverview'] = 'Overview';
+$string['dashboardnavigation'] = 'RapidCMI5 management sections';
+$string['dashboardintro'] = 'Manage your content, see where it is used, and keep your player versions up to date.';
+$string['projectdetailintro'] = 'Review version history, upload a release, and manage deployed activities.';
+$string['uploadpageintro'] = 'Upload content and record its version details.';
+$string['adoptpageintro'] = 'Bring an existing activity into your managed project library.';
+$string['dashboardexplore'] = 'Explore';
+$string['dashboardprojectcount'] = 'projects';
+$string['dashboardcoursecount'] = 'courses with managed content';
+$string['dashboardplayercount'] = 'player versions';
+$string['dashboardfiles'] = 'Files';
+$string['searchprojects'] = 'Search projects';
+$string['viewrepository'] = 'View repository';
+
+$string['backtoprojects'] = 'Back to projects';
+$string['backtocourses'] = 'Back to courses';
+$string['backtocourseprojects'] = 'Back to {$a} projects';

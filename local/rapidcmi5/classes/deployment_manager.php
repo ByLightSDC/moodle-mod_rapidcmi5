@@ -28,6 +28,78 @@ require_once($CFG->dirroot . '/course/modlib.php');
 class deployment_manager {
 
     /**
+     * Track a cmi5 activity added outside RapidCMI5, such as from the mod_cmi5 activity library.
+     *
+     * The activity is recorded as a deployment when its library revision belongs to exactly one project
+     * version and the project has no other managed activity in the course. An activity that is already
+     * tracked follows its revision to another version of the same project.
+     *
+     * @param int $cmid Course module ID.
+     * @return \stdClass|null The deployment, or null when the activity is not tracked.
+     */
+    public static function link_library_activity(int $cmid): ?\stdClass {
+        global $DB;
+        $cm = get_coursemodule_from_id('cmi5', $cmid, 0, false, IGNORE_MISSING);
+        $revisionid = $cm ? (int) $DB->get_field('cmi5', 'packageversionid', ['id' => $cm->instance]) : 0;
+        if (!$revisionid) {
+            return null;
+        }
+        $versions = $DB->get_records('local_rapidcmi5_versions', ['libraryversionid' => $revisionid],
+            'id ASC', 'id, projectid', 0, 2);
+        if (count($versions) !== 1) {
+            return null;
+        }
+        $version = reset($versions);
+        $now = time();
+        $existing = $DB->get_record('local_rapidcmi5_deployments', ['cmid' => $cmid]);
+        if ($existing) {
+            if ((int) $existing->projectid === (int) $version->projectid && (int) $existing->versionid !== (int) $version->id) {
+                $existing->versionid = $version->id;
+                $existing->timemodified = $now;
+                $DB->update_record('local_rapidcmi5_deployments', $existing);
+            }
+            return $existing;
+        }
+        if ($DB->record_exists('local_rapidcmi5_deployments', ['projectid' => $version->projectid, 'courseid' => $cm->course])) {
+            // One managed activity per project per course, as for adoption.
+            return null;
+        }
+        $deployment = (object) ['projectid' => $version->projectid, 'versionid' => $version->id,
+            'courseid' => $cm->course, 'cmid' => $cmid,
+            'sectionid' => $DB->get_field('course_sections', 'section', ['id' => $cm->section]),
+            'timecreated' => $now, 'timemodified' => $now];
+        $deployment->id = $DB->insert_record('local_rapidcmi5_deployments', $deployment);
+        return $deployment;
+    }
+
+    /**
+     * Deploy one version to several courses, reporting each course so one failure does not stop the rest.
+     *
+     * @param int $projectid Project ID.
+     * @param int $versionid Project version ID.
+     * @param int $libraryversionid Content library revision ID.
+     * @param int[] $courseids Courses to deploy to; repeated IDs are deployed once.
+     * @param string $name Activity name.
+     * @param int $sectionid Section number for new activities.
+     * @return array[] One entry per course: courseid, cmid (0 on error), status ('success' or 'error') and message.
+     */
+    public static function deploy_to_courses(int $projectid, int $versionid, int $libraryversionid,
+            array $courseids, string $name, int $sectionid = 0): array {
+        $results = [];
+        foreach (array_unique(array_map('intval', $courseids)) as $courseid) {
+            try {
+                $deployment = self::deploy_to_course($projectid, $versionid, $libraryversionid, $courseid,
+                    $name, $sectionid);
+                $results[] = ['courseid' => $courseid, 'cmid' => (int) $deployment->cmid,
+                    'status' => 'success', 'message' => ''];
+            } catch (\Exception $e) {
+                $results[] = ['courseid' => $courseid, 'cmid' => 0, 'status' => 'error', 'message' => $e->getMessage()];
+            }
+        }
+        return $results;
+    }
+
+    /**
      * Deploy or update a cmi5 activity in a course from a content library package.
      *
      * @param int $projectid RapidCMI5 project ID.
@@ -69,15 +141,25 @@ class deployment_manager {
         $cmid = self::create_activity($courseid, $libraryversionid, $name, $sectionid);
 
         $now = time();
-        $deployment = new \stdClass();
-        $deployment->projectid = $projectid;
-        $deployment->versionid = $versionid;
-        $deployment->courseid = $courseid;
-        $deployment->cmid = $cmid;
-        $deployment->sectionid = $sectionid ?: null;
-        $deployment->timecreated = $now;
-        $deployment->timemodified = $now;
-        $deployment->id = $DB->insert_record('local_rapidcmi5_deployments', $deployment);
+        // Creating the activity fires course_module_created, which may already have recorded it
+        // (see link_library_activity()), so complete that record rather than adding a second one.
+        $deployment = $DB->get_record('local_rapidcmi5_deployments', ['cmid' => $cmid]);
+        if ($deployment) {
+            $deployment->projectid = $projectid;
+            $deployment->versionid = $versionid;
+            $deployment->timemodified = $now;
+            $DB->update_record('local_rapidcmi5_deployments', $deployment);
+        } else {
+            $deployment = new \stdClass();
+            $deployment->projectid = $projectid;
+            $deployment->versionid = $versionid;
+            $deployment->courseid = $courseid;
+            $deployment->cmid = $cmid;
+            $deployment->sectionid = $sectionid ?: null;
+            $deployment->timecreated = $now;
+            $deployment->timemodified = $now;
+            $deployment->id = $DB->insert_record('local_rapidcmi5_deployments', $deployment);
+        }
 
         // Fire deployment event.
         self::fire_deployed_event($deployment->id, $courseid, $cmid, $versionid);
@@ -138,11 +220,16 @@ class deployment_manager {
         // Set the library package source (field names must match what cmi5_add_instance expects).
         $moduleinfo->packagesource = 'library';
         $moduleinfo->packageid = $libraryversion->packageid;
+        $moduleinfo->profileid = $libraryversion->profileid ?? 0;
 
         // Use Moodle's standard module creation.
         // cmi5_add_instance will resolve the latest version, set packageversionid,
         // copy AU structure, and increment usage count.
         $moduleinfo = add_moduleinfo($moduleinfo, $course);
+        // The module defaults to the library's latest revision; honor the requested project revision.
+        if ((int) $DB->get_field('cmi5', 'packageversionid', ['id' => $moduleinfo->instance]) !== $libraryversionid) {
+            \mod_cmi5\content_library::sync_activity_to_version($moduleinfo->instance, $libraryversionid);
+        }
 
         return $moduleinfo->coursemodule;
     }

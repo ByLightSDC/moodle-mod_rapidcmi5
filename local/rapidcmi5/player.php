@@ -92,15 +92,11 @@ foreach ($versions as $v) {
 $templatedata = [
     'versions' => $versiondata,
     'hasversions' => !empty($versiondata),
-    'projectsurl' => (new moodle_url('/local/rapidcmi5/index.php'))->out(false),
 ];
 
-echo $OUTPUT->header();
-echo html_writer::link(
-    new moodle_url('/local/rapidcmi5/manage.php'),
-    get_string('backtomanagement', 'local_rapidcmi5'),
-    ['class' => 'btn btn-secondary mb-3']
-);
-$form->display();
+echo \local_rapidcmi5\dashboard::header('players', 'playerversions_desc');
 echo $OUTPUT->render_from_template('local_rapidcmi5/player_versions', $templatedata);
-echo $OUTPUT->footer();
+echo html_writer::start_div('rcmi-form-panel');
+$form->display();
+echo html_writer::end_div();
+echo \local_rapidcmi5\dashboard::footer();

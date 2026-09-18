@@ -4,19 +4,19 @@
     Template for the player versions admin page.
 }}
 <div class="local-rapidcmi5-player-versions">
-    <p><a href="{{{projectsurl}}}">&laquo; {{#str}}projects, local_rapidcmi5{{/str}}</a></p>
 
     {{#hasversions}}
+    <div class="rcmi-table-panel table-responsive">
     <table class="table table-striped">
         <thead>
             <tr>
-                <th>{{#str}}version, local_rapidcmi5{{/str}}</th>
-                <th>SHA256</th>
-                <th>Files</th>
-                <th>{{#str}}packages, local_rapidcmi5{{/str}}</th>
-                <th>{{#str}}created, local_rapidcmi5{{/str}}</th>
-                <th>Status</th>
-                <th>{{#str}}actions, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}version, local_rapidcmi5{{/str}}</th>
+                <th scope="col">SHA256</th>
+                <th scope="col">{{#str}}dashboardfiles, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}packages, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}created, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}versionstatus, local_rapidcmi5{{/str}}</th>
+                <th scope="col">{{#str}}actions, local_rapidcmi5{{/str}}</th>
             </tr>
         </thead>
         <tbody>
@@ -34,7 +34,7 @@
                 </td>
                 <td>
                     {{#canupgrade}}
-                    <form method="post" action="{{{upgradeallurl}}}" style="display:inline"
+                    <form method="post" action="{{{upgradeallurl}}}" class="rcmi-inline-form"
                           onsubmit="return confirm('{{#str}}upgradeallconfirm, local_rapidcmi5{{/str}}');">
                         <input type="hidden" name="action" value="upgradeall">
                         <input type="hidden" name="oldplayerid" value="{{id}}">
@@ -50,9 +50,10 @@
             {{/versions}}
         </tbody>
     </table>
+    </div>
     {{/hasversions}}
 
     {{^hasversions}}
-    <div class="alert alert-info">{{#str}}noplayerversions, local_rapidcmi5{{/str}}</div>
+    <div class="alert alert-info rcmi-empty-state">{{#str}}noplayerversions, local_rapidcmi5{{/str}}</div>
     {{/hasversions}}
 </div>

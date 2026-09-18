@@ -21,6 +21,14 @@ $context = context_system::instance();
 require_capability('local/rapidcmi5:manage', $context);
 
 $id = required_param('id', PARAM_INT);
+$courseid = optional_param('courseid', 0, PARAM_INT);
+$search = trim(optional_param('search', '', PARAM_TEXT));
+$page = max(0, optional_param('page', 0, PARAM_INT));
+$listparams = ['search' => $search, 'page' => $page];
+$navigationparams = $courseid ? ['courseid' => $courseid] + $listparams : $listparams;
+$projecturl = new moodle_url('/local/rapidcmi5/project.php', ['id' => $id] + $navigationparams);
+$backurl = new moodle_url('/local/rapidcmi5/index.php', $listparams);
+$backlabel = get_string('backtoprojects', 'local_rapidcmi5');
 
 $project = \local_rapidcmi5\project_manager::get_project($id);
 if (!$project) {
@@ -28,14 +36,22 @@ if (!$project) {
 }
 
 $PAGE->set_context($context);
-$PAGE->set_url(new moodle_url('/local/rapidcmi5/project.php', ['id' => $id]));
+$PAGE->set_url($projecturl);
 $PAGE->set_title($project->name);
 $PAGE->set_heading($project->name);
 $PAGE->set_pagelayout('admin');
-$PAGE->navbar->add(
-    get_string('projects', 'local_rapidcmi5'),
-    new moodle_url('/local/rapidcmi5/index.php')
-);
+$PAGE->navbar->add(get_string('manage_dashboard', 'local_rapidcmi5'), new moodle_url('/local/rapidcmi5/manage.php'));
+if ($courseid) {
+    $course = get_course($courseid);
+    $coursename = format_string($course->fullname, true, ['context' => context_course::instance($courseid)]);
+    $backurl = new moodle_url('/local/rapidcmi5/courses.php', $navigationparams);
+    $backlabel = get_string('backtocourseprojects', 'local_rapidcmi5', $coursename);
+    $PAGE->navbar->add(get_string('projectsbycourse', 'local_rapidcmi5'),
+        new moodle_url('/local/rapidcmi5/courses.php', $listparams));
+    $PAGE->navbar->add($coursename, $backurl);
+} else {
+    $PAGE->navbar->add(get_string('projects', 'local_rapidcmi5'), $backurl);
+}
 $PAGE->navbar->add($project->name);
 
 $versions = \local_rapidcmi5\project_manager::get_versions($id);
@@ -64,19 +80,13 @@ $deployments = $validdeployments;
 $latestplayer = \local_rapidcmi5\player_manager::get_latest_player_version();
 $allplayerversions = \local_rapidcmi5\player_manager::list_player_versions();
 $actionurl = new moodle_url('/local/rapidcmi5/player_action.php');
-$returnurl = (new moodle_url('/local/rapidcmi5/project.php', ['id' => $id]))->out(false);
+$returnurl = $projecturl->out(false);
 
 $versiondata = [];
 foreach ($versions as $v) {
     $iscurrent = ($project->currentversionid == $v->id);
 
-    // Find the library package version for this project version.
-    $libraryversion = $DB->get_record_sql(
-        "SELECT * FROM {cmi5_package_versions}
-         WHERE packageid = :packageid
-         ORDER BY timecreated DESC LIMIT 1",
-        ['packageid' => $v->packageid]
-    );
+    $libraryversion = \local_rapidcmi5\project_manager::get_library_version($v);
 
     // Detect player version in the library package.
     $playerversion = '';
@@ -117,7 +127,7 @@ foreach ($versions as $v) {
         'iscurrent' => $iscurrent,
         'playerversion' => $playerversion,
         'libraryversionid' => $libraryversionid,
-        'hasplayerversions' => !empty($allplayerversions),
+        'hasplayerversions' => !empty($allplayerversions) && !empty($libraryversionid),
         'playeroptions' => $versionplayeroptions,
         'actionurl' => $actionurl->out(false),
         'sesskey' => sesskey(),
@@ -189,6 +199,8 @@ foreach ($deployments as $d) {
 }
 
 $templatedata = [
+    'canuploadversion' => has_capability('local/rapidcmi5:deploy', $context),
+    'uploadversionurl' => (new moodle_url('/local/rapidcmi5/upload.php', ['projectid' => $id] + $navigationparams))->out(false),
     'project' => [
         'id' => $project->id,
         'name' => $project->name,
@@ -205,17 +217,12 @@ $templatedata = [
     'deployments' => $deploymentdata,
     'hasdeployments' => !empty($deploymentdata),
     'packagemissing' => $packagemissing,
-    'backurl' => (new moodle_url('/local/rapidcmi5/index.php'))->out(false),
+    'backurl' => $backurl->out(false),
+    'backlabel' => $backlabel,
     'actionurl' => $actionurl->out(false),
     'sesskey' => sesskey(),
 ];
 
-echo $OUTPUT->header();
-echo html_writer::link(
-    new moodle_url('/local/rapidcmi5/manage.php'),
-    get_string('backtomanagement', 'local_rapidcmi5'),
-    ['class' => 'btn btn-secondary mb-3']
-);
-$form->display();
+echo \local_rapidcmi5\dashboard::header($courseid ? 'courses' : 'projects', 'projectdetailintro');
 echo $OUTPUT->render_from_template('local_rapidcmi5/project_detail', $templatedata);
-echo $OUTPUT->footer();
+echo \local_rapidcmi5\dashboard::footer();

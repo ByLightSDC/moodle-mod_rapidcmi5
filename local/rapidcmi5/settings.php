@@ -30,6 +30,12 @@ if ($hassiteconfig) {
         'local/rapidcmi5:manage'
     ));
     $ADMIN->add('local_rapidcmi5', new admin_externalpage(
+        'local_rapidcmi5_courses',
+        get_string('projectsbycourse', 'local_rapidcmi5'),
+        new moodle_url('/local/rapidcmi5/courses.php'),
+        'local/rapidcmi5:manage'
+    ));
+    $ADMIN->add('local_rapidcmi5', new admin_externalpage(
         'local_rapidcmi5_player',
         get_string('playerversions', 'local_rapidcmi5'),
         new moodle_url('/local/rapidcmi5/player.php'),

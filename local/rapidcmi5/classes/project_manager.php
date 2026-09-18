@@ -90,12 +90,16 @@ class project_manager {
      * @param int $buildtimestamp Unix timestamp when CLI built the package.
      * @param string $sha256hash Optional ZIP hash.
      * @param string $releasenotes Optional release notes.
+     * @param int $libraryversionid Exact content library revision, when known.
+     * @param bool $makecurrent Whether this version becomes the project's current version.
+     *                          Pass false when importing a revision that predates the current one.
      * @return object The created version record.
      * @throws \moodle_exception If version already exists.
      */
     public static function create_version(int $projectid, string $versionnumber, int $packageid,
             string $commithash = '', int $buildtimestamp = 0,
-            string $sha256hash = '', string $releasenotes = ''): \stdClass {
+            string $sha256hash = '', string $releasenotes = '', int $libraryversionid = 0,
+            bool $makecurrent = true): \stdClass {
         global $DB, $USER;
 
         // Check for duplicate version.
@@ -113,6 +117,7 @@ class project_manager {
         $version->commithash = $commithash ?: null;
         $version->buildtimestamp = $buildtimestamp ?: $now;
         $version->packageid = $packageid;
+        $version->libraryversionid = $libraryversionid ?: null;
         $version->sha256hash = $sha256hash ?: null;
         $version->releasenotes = $releasenotes ?: null;
         $version->createdby = $USER->id;
@@ -120,14 +125,40 @@ class project_manager {
         $version->id = $DB->insert_record('local_rapidcmi5_versions', $version);
 
         // Update project's current version and package pointers.
-        $DB->update_record('local_rapidcmi5_projects', (object) [
-            'id' => $projectid,
-            'currentversionid' => $version->id,
-            'currentpackageid' => $packageid,
-            'timemodified' => $now,
-        ]);
+        if ($makecurrent) {
+            $DB->update_record('local_rapidcmi5_projects', (object) [
+                'id' => $projectid,
+                'currentversionid' => $version->id,
+                'currentpackageid' => $packageid,
+                'timemodified' => $now,
+            ]);
+        }
 
         return $version;
+    }
+
+    /**
+     * Resolve the exact library revision a project version was built from, never a newer upload.
+     *
+     * @param \stdClass $version A local_rapidcmi5_versions record.
+     * @return \stdClass|false The cmi5_package_versions record, or false when it cannot be identified.
+     */
+    public static function get_library_version(\stdClass $version): \stdClass|false {
+        global $DB;
+        if (!empty($version->libraryversionid)) {
+            // Strict on purpose: if the stored revision was deleted, do not guess a replacement by hash.
+            return $DB->get_record('cmi5_package_versions',
+                ['id' => $version->libraryversionid, 'packageid' => $version->packageid]);
+        }
+        // Rows created before libraryversionid was stored. Without a hash the package's remaining
+        // revisions say nothing about which one this version was, so refuse rather than guess.
+        if (empty($version->sha256hash)) {
+            return false;
+        }
+        // The same ZIP uploaded twice gives identical revisions; any of them has the right content.
+        $matches = $DB->get_records('cmi5_package_versions',
+            ['packageid' => $version->packageid, 'sha256hash' => $version->sha256hash], 'id ASC', '*', 0, 1);
+        return $matches ? reset($matches) : false;
     }
 
     /**
@@ -223,7 +254,7 @@ class project_manager {
 
         $sql = "SELECT versionnumber FROM {local_rapidcmi5_versions}
                 WHERE projectid = :projectid AND id != :excludeid
-                ORDER BY timecreated DESC";
+                ORDER BY timecreated DESC, id DESC";
         $record = $DB->get_record_sql($sql, [
             'projectid' => $projectid,
             'excludeid' => $excludeversionid,

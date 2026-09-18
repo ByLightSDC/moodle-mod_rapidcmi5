@@ -77,34 +77,7 @@ class player_manager {
         $tempdir = make_request_directory();
         $packer = get_file_packer('application/zip');
         $zipfile->extract_to_pathname($packer, $tempdir);
-
-        // Read or generate manifest.
-        $manifestpath = $tempdir . '/player-manifest.json';
-        if (file_exists($manifestpath)) {
-            $manifestjson = file_get_contents($manifestpath);
-            $manifestdata = json_decode($manifestjson, true);
-            if (empty($manifestdata['files'])) {
-                throw new \moodle_exception('error:invalidmanifest', 'local_rapidcmi5');
-            }
-        } else {
-            // Generate manifest from directory listing.
-            $manifestdata = self::generate_manifest_from_dir($tempdir, $version);
-        }
-
-        // Read raw index.html and cfg.json templates.
-        $indexhtml = '';
-        $cfgjson = '';
-        if (file_exists($tempdir . '/index.html')) {
-            $indexhtml = file_get_contents($tempdir . '/index.html');
-        }
-        if (file_exists($tempdir . '/cfg.json')) {
-            $cfgjson = file_get_contents($tempdir . '/cfg.json');
-        }
-
-        // Store manifest with templates included.
-        $manifestdata['indexhtml'] = $indexhtml;
-        $manifestdata['cfgjson'] = $cfgjson;
-        $manifestdata['playerVersion'] = $version;
+        $manifestdata = self::build_player_manifest(self::find_player_root($tempdir), $version);
 
         $now = time();
         $record = new \stdClass();
@@ -132,7 +105,96 @@ class player_manager {
     }
 
     /**
-     * Generate a manifest from a directory listing (for player ZIPs without player-manifest.json).
+     * Directory holding the player inside an extracted ZIP.
+     *
+     * Build tools often zip the output folder itself (e.g. dist/apps/cc-cmi5-player/), so descend
+     * through folders that are the only entry at their level until the player files appear.
+     *
+     * @param string $dir Extraction directory.
+     * @return string The player root directory.
+     */
+    private static function find_player_root(string $dir): string {
+        for ($depth = 0; $depth < 5; $depth++) {
+            if (is_file($dir . '/index.html') || is_file($dir . '/player-manifest.json')) {
+                return $dir;
+            }
+            $entries = array_values(array_diff(scandir($dir), ['.', '..', '__MACOSX', '.DS_Store']));
+            if (count($entries) !== 1 || !is_dir($dir . '/' . $entries[0])) {
+                return $dir;
+            }
+            $dir .= '/' . $entries[0];
+        }
+        return $dir;
+    }
+
+    /**
+     * Read or generate the manifest for an extracted player, with the index.html and cfg.json templates.
+     *
+     * @param string $root Player root directory (see find_player_root()).
+     * @param string $version Player version being stored.
+     * @return array Manifest data.
+     * @throws \moodle_exception When the player has nothing that could be installed into a package.
+     */
+    private static function build_player_manifest(string $root, string $version): array {
+        $manifestpath = $root . '/player-manifest.json';
+        $manifestdata = is_file($manifestpath) ? json_decode(file_get_contents($manifestpath), true) : null;
+        if ($manifestdata !== null && !is_array($manifestdata)) {
+            throw new \moodle_exception('error:invalidmanifest', 'local_rapidcmi5');
+        }
+        // A player's own manifest lists only its unhashed files, not the main/runtime/styles bundles,
+        // chunks or assets, so install everything the player ships.
+        $manifestdata = array_merge($manifestdata ?? [], self::generate_manifest_from_dir($root, $version));
+        $manifestdata['indexhtml'] = is_file($root . '/index.html') ? file_get_contents($root . '/index.html') : '';
+        $manifestdata['cfgjson'] = is_file($root . '/cfg.json') ? file_get_contents($root . '/cfg.json') : '';
+        $manifestdata['playerVersion'] = $version;
+        self::assert_installable($manifestdata, $root);
+        return $manifestdata;
+    }
+
+    /**
+     * Refuse a player that would leave packages without a working player once their old one is removed.
+     *
+     * @param array $manifest Player manifest, including the indexhtml template.
+     * @param string $root Player root directory the listed files are copied from.
+     * @throws \moodle_exception error:invalidplayerpackage
+     */
+    private static function assert_installable(array $manifest, string $root): void {
+        $files = $manifest['files'] ?? [];
+        $missing = array_filter($files, fn($relpath) => $relpath !== 'cfg.json' && !is_file($root . '/' . $relpath));
+        if (empty($files) || $missing || trim($manifest['indexhtml'] ?? '') === '' ||
+                !preg_grep('/^main\.[a-f0-9]+\.js$/', $files)) {
+            throw new \moodle_exception('error:invalidplayerpackage', 'local_rapidcmi5');
+        }
+    }
+
+    /**
+     * Rebuild a stored player version's manifest from its ZIP.
+     *
+     * Repairs versions uploaded before wrapped ZIPs were supported, which were saved with no files.
+     *
+     * @param int $playerversionid Player version ID.
+     * @return bool True when the stored manifest changed.
+     */
+    public static function rebuild_player_manifest(int $playerversionid): bool {
+        global $DB;
+        $record = $DB->get_record('local_rapidcmi5_player_versions', ['id' => $playerversionid], '*', MUST_EXIST);
+        $zips = get_file_storage()->get_area_files(\context_system::instance()->id, self::COMPONENT, self::FILEAREA,
+            $playerversionid, 'sortorder, id', false);
+        if (!$zips) {
+            throw new \moodle_exception('error:playerfilenotfound', 'local_rapidcmi5');
+        }
+        $tempdir = make_request_directory();
+        reset($zips)->extract_to_pathname(get_file_packer('application/zip'), $tempdir);
+        $manifest = json_encode(self::build_player_manifest(self::find_player_root($tempdir), $record->version));
+        if ($manifest === $record->manifest) {
+            return false;
+        }
+        $DB->set_field('local_rapidcmi5_player_versions', 'manifest', $manifest, ['id' => $playerversionid]);
+        return true;
+    }
+
+    /**
+     * List every file a player ships, relative to its root, as the files to install into packages.
      *
      * @param string $dir Temp directory path.
      * @param string $version Version string.
@@ -140,32 +202,17 @@ class player_manager {
      */
     private static function generate_manifest_from_dir(string $dir, string $version): array {
         $files = [];
-        $iterator = new \DirectoryIterator($dir);
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS));
         foreach ($iterator as $file) {
-            if ($file->isDot()) {
-                continue;
-            }
-            $filename = $file->getFilename();
-            if ($file->isDir()) {
-                if ($filename === 'assets') {
-                    // Include all files under assets/.
-                    $assetiter = new \RecursiveIteratorIterator(
-                        new \RecursiveDirectoryIterator($file->getPathname(), \RecursiveDirectoryIterator::SKIP_DOTS)
-                    );
-                    foreach ($assetiter as $assetfile) {
-                        if ($assetfile->isFile()) {
-                            $relpath = 'assets/' . substr($assetfile->getPathname(), strlen($file->getPathname()) + 1);
-                            $files[] = str_replace('\\', '/', $relpath);
-                        }
-                    }
-                }
-                continue;
-            }
-            // Skip compiled_course or other non-player content.
-            if (self::is_player_root_file($filename)) {
-                $files[] = $filename;
+            $relpath = str_replace('\\', '/', substr($file->getPathname(), strlen($dir) + 1));
+            // cfg.json is kept as a template only and the manifest is rewritten by each upgrade.
+            if ($file->isFile() && !in_array($relpath, ['cfg.json', 'player-manifest.json'], true) &&
+                    strpos($relpath, '__MACOSX/') !== 0 && $file->getFilename() !== '.DS_Store') {
+                $files[] = $relpath;
             }
         }
+        sort($files);
 
         return [
             'playerVersion' => $version,
@@ -272,36 +319,47 @@ class player_manager {
     }
 
     /**
+     * Player version declared by a package's root player-manifest.json.
+     *
+     * @param string|null $manifestjson Manifest contents, or null when the package has none.
+     * @return string|null The version, or null when missing or unreadable.
+     */
+    public static function manifest_player_version(?string $manifestjson): ?string {
+        $data = $manifestjson === null ? null : json_decode($manifestjson, true);
+        $version = is_array($data) ? ($data['playerVersion'] ?? null) : null;
+        return !empty($version) && is_scalar($version) ? (string) $version : null;
+    }
+
+    /**
+     * Whether a package is RapidCMI5 content: a manifest with a player version, or a built player bundle at its root.
+     *
+     * @param string[] $rootfilenames Names of the files at the package root.
+     * @param string|null $manifestjson Root player-manifest.json contents, or null when absent.
+     * @return bool
+     */
+    public static function is_rapid_package(array $rootfilenames, ?string $manifestjson): bool {
+        return self::manifest_player_version($manifestjson) !== null ||
+            (bool) preg_grep('/^main\.[a-f0-9]+\.js$/', $rootfilenames);
+    }
+
+    /**
      * Core detection logic for any file area.
      */
     private static function detect_player_in_filearea(\file_storage $fs, int $contextid,
             string $component, string $filearea, int $itemid): \stdClass {
         $result = new \stdClass();
-        $result->is_rapidcmi5 = false;
-        $result->player_version = null;
         $result->au_count = 0;
 
-        // Check for player-manifest.json at root.
         $manifest = $fs->get_file($contextid, $component, $filearea, $itemid, '/', 'player-manifest.json');
-        if ($manifest && !$manifest->is_directory()) {
-            $data = json_decode($manifest->get_content(), true);
-            if (!empty($data['playerVersion'])) {
-                $result->is_rapidcmi5 = true;
-                $result->player_version = $data['playerVersion'];
-            }
-        }
-
-        // Heuristic: look for main.*.js at root.
-        if (!$result->is_rapidcmi5) {
+        $manifestjson = $manifest && !$manifest->is_directory() ? $manifest->get_content() : null;
+        $result->player_version = self::manifest_player_version($manifestjson);
+        // Only list the root when the manifest alone does not settle it.
+        $rootfilenames = [];
+        if ($result->player_version === null) {
             $rootfiles = $fs->get_directory_files($contextid, $component, $filearea, $itemid, '/', false, false);
-            foreach ($rootfiles as $file) {
-                $filename = $file->get_filename();
-                if (preg_match('/^main\.[a-f0-9]+\.js$/', $filename)) {
-                    $result->is_rapidcmi5 = true;
-                    break;
-                }
-            }
+            $rootfilenames = array_map(fn(\stored_file $file) => $file->get_filename(), $rootfiles);
         }
+        $result->is_rapidcmi5 = self::is_rapid_package($rootfilenames, $manifestjson);
 
         // Count AU directories (those containing config.json under compiled_course/blocks/).
         if ($result->is_rapidcmi5) {
@@ -392,6 +450,10 @@ class player_manager {
         $tempdir = make_request_directory();
         $packer = get_file_packer('application/zip');
         $playerzip->extract_to_pathname($packer, $tempdir);
+        $tempdir = self::find_player_root($tempdir);
+        // Old player files are deleted below, so check the replacement is complete first.
+        self::assert_installable($manifest, $tempdir);
+        $transaction = $DB->start_delegated_transaction();
 
         // Step 1: Identify existing player files to delete at root.
         $oldmanifest = null;
@@ -526,6 +588,7 @@ class player_manager {
         self::write_file_content($fs, $contextid, $component, $filearea, $itemid,
             '/', 'player-manifest.json', json_encode($newmanifest, JSON_PRETTY_PRINT));
 
+        $transaction->allow_commit();
         $result->success = true;
         return $result;
     }

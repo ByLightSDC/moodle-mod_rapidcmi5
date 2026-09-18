@@ -34,7 +34,7 @@ Bridge plugin between the [RapidCMI5 Electron CLI](https://github.com/bylightsdc
 
 | Function | Type | Description |
 |---|---|---|
-| `local_rapidcmi5_deploy_package` | write | Deploy a cmi5 package with project/version tracking |
+| `local_rapidcmi5_deploy_package` | write | Deploy a RapidCMI5 cmi5 package with project/version tracking. The project is identified by the course ID in the package's `cmi5.xml`; `project_identifier` is optional and ignored. |
 | `local_rapidcmi5_list_projects` | read | List all projects |
 | `local_rapidcmi5_get_project` | read | Get project details with versions and deployments |
 | `local_rapidcmi5_get_project_versions` | read | Get version history for a project |

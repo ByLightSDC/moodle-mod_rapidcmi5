@@ -25,7 +25,7 @@ use core_external\external_single_structure;
 use core_external\external_value;
 use local_rapidcmi5\project_manager;
 use local_rapidcmi5\deployment_manager;
-use mod_cmi5\content_library;
+use local_rapidcmi5\version_uploader;
 
 /**
  * Deploy a cmi5 package from the RapidCMI5 CLI with project/version tracking.
@@ -35,7 +35,8 @@ class deploy_package extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'draftitemid' => new external_value(PARAM_INT, 'Draft area item ID from core_files_upload'),
-            'project_identifier' => new external_value(PARAM_TEXT, 'Stable project ID (courseId IRI)'),
+            'project_identifier' => new external_value(PARAM_TEXT,
+                'Ignored: the project is identified by the course ID in the package\'s cmi5.xml', VALUE_DEFAULT, ''),
             'project_name' => new external_value(PARAM_TEXT, 'Project display name', VALUE_DEFAULT, ''),
             'version' => new external_value(PARAM_TEXT, 'Version string (semver or build number)'),
             'commit_hash' => new external_value(PARAM_ALPHANUMEXT, 'Git commit hash', VALUE_DEFAULT, ''),
@@ -56,9 +57,6 @@ class deploy_package extends external_api {
             string $project_name, string $version, string $commit_hash,
             string $git_repo_url, int $build_timestamp, string $release_notes,
             array $deploy_to_courses, int $section_id): array {
-
-        global $DB;
-
         $params = self::validate_parameters(self::execute_parameters(), [
             'draftitemid' => $draftitemid,
             'project_identifier' => $project_identifier,
@@ -76,84 +74,25 @@ class deploy_package extends external_api {
         self::validate_context($context);
         require_capability('local/rapidcmi5:deploy', $context);
 
-        // 1. Get or create the project.
-        $result = project_manager::get_or_create_project(
-            $params['project_identifier'],
-            $params['project_name'],
-            $params['git_repo_url']
-        );
-        $project = $result->project;
-        $isnewproject = $result->is_new;
-
-        // 2. Upload ZIP to content library via mod_cmi5.
-        // If the project already has a library package, create a new version under it;
-        // otherwise create a new package. Reset if the package was deleted externally.
-        $existingpackageid = 0;
-        if (!empty($project->currentpackageid)) {
-            if ($DB->record_exists('cmi5_packages', ['id' => $project->currentpackageid])) {
-                $existingpackageid = (int) $project->currentpackageid;
-            }
-        }
-        $libraryversion = content_library::upload_package_from_draft(
-            $params['draftitemid'],
-            $params['project_name'] ?: $params['project_identifier'],
-            '', // description
-            0,  // profileid
-            $existingpackageid
-        );
-        $packageid = (int) $libraryversion->packageid;
-        $libraryversionid = (int) $libraryversion->id;
-
-        // 3. Create version record (stores the library package ID for reference).
-        $versionrecord = project_manager::create_version(
-            $project->id,
-            $params['version'],
-            $packageid,
-            $params['commit_hash'],
-            $params['build_timestamp'],
-            $libraryversion->sha256hash ?? '',
-            $params['release_notes'],
-            $libraryversionid
-        );
-
-        // 4. Get previous version string.
+        // Validates the package, then creates the project if needed and the version in one transaction.
+        $uploaded = version_uploader::upload_package($params['draftitemid'], $params['version'],
+            $params['release_notes'], [
+                'name' => $params['project_name'],
+                'gitrepourl' => $params['git_repo_url'],
+                'commithash' => $params['commit_hash'],
+                'buildtimestamp' => $params['build_timestamp'],
+            ]);
+        $project = $uploaded->project;
+        $versionrecord = $uploaded->version;
         $previousversion = project_manager::get_previous_version($project->id, $versionrecord->id);
-
-        // 5. Auto-deploy to courses if requested.
-        $deployments = [];
-        if (!empty($params['deploy_to_courses'])) {
-            foreach ($params['deploy_to_courses'] as $courseid) {
-                try {
-                    $deployment = deployment_manager::deploy_to_course(
-                        $project->id,
-                        $versionrecord->id,
-                        $libraryversionid,
-                        $courseid,
-                        $project->name,
-                        $params['section_id']
-                    );
-                    $deployments[] = [
-                        'courseid' => $deployment->courseid,
-                        'cmid' => $deployment->cmid,
-                        'status' => 'success',
-                        'message' => '',
-                    ];
-                } catch (\Exception $e) {
-                    $deployments[] = [
-                        'courseid' => $courseid,
-                        'cmid' => 0,
-                        'status' => 'error',
-                        'message' => $e->getMessage(),
-                    ];
-                }
-            }
-        }
+        $deployments = deployment_manager::deploy_to_courses($project->id, $versionrecord->id,
+            (int) $versionrecord->libraryversionid, $params['deploy_to_courses'], $project->name, $params['section_id']);
 
         return [
             'projectid' => (int) $project->id,
             'versionid' => (int) $versionrecord->id,
-            'packageid' => $packageid,
-            'is_new_project' => $isnewproject,
+            'packageid' => (int) $versionrecord->packageid,
+            'is_new_project' => $uploaded->isnewproject,
             'previous_version' => $previousversion ?? '',
             'deployments' => $deployments,
         ];

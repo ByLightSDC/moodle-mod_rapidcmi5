@@ -37,12 +37,10 @@ class upload_package_form extends \moodleform {
                 s($project->identifier));
             $mform->addElement('static', 'uploadnotice', '', get_string('uploadversionnotice', 'local_rapidcmi5'));
         } else {
-            $mform->addElement('text', 'project_identifier', get_string('projectidentifier', 'local_rapidcmi5'));
-            $mform->setType('project_identifier', PARAM_TEXT);
-            $mform->addRule('project_identifier', get_string('required'), 'required', null, 'client');
-            $mform->addHelpButton('project_identifier', 'projectidentifier', 'local_rapidcmi5');
+            // The project is identified by the course ID in the package's cmi5.xml.
             $mform->addElement('text', 'project_name', get_string('projectname', 'local_rapidcmi5'));
             $mform->setType('project_name', PARAM_TEXT);
+            $mform->addHelpButton('project_name', 'projectname', 'local_rapidcmi5');
             $mform->addElement('text', 'git_repo_url', get_string('gitrepo', 'local_rapidcmi5'));
             $mform->setType('git_repo_url', PARAM_URL);
         }
@@ -70,23 +68,38 @@ class upload_package_form extends \moodleform {
         $this->add_action_buttons(true, get_string($project ? 'uploadnewversion' : 'uploadanddeploy', 'local_rapidcmi5'));
     }
 
+    /**
+     * Course IDs from the comma-separated deploy field, each once.
+     *
+     * @param string $value Field value, e.g. "12, 15".
+     * @return int[]|null The IDs, or null when any entry is not a positive whole number.
+     */
+    public static function parse_course_ids(string $value): ?array {
+        $ids = [];
+        foreach (array_filter(array_map('trim', explode(',', $value)), 'strlen') as $id) {
+            if (!ctype_digit($id) || (int) $id <= 0) {
+                return null;
+            }
+            $ids[] = (int) $id;
+        }
+        return array_values(array_unique($ids));
+    }
+
     public function validation($data, $files) {
         $errors = parent::validation($data, $files);
 
-        if (!empty($data['deploy_course_ids'])) {
-            $ids = array_map('trim', explode(',', $data['deploy_course_ids']));
-            foreach ($ids as $id) {
-                if (!is_numeric($id) || (int) $id <= 0) {
-                    $errors['deploy_course_ids'] = get_string('error:invalidcourseids', 'local_rapidcmi5');
-                    break;
-                }
-            }
+        if (self::parse_course_ids($data['deploy_course_ids'] ?? '') === null) {
+            $errors['deploy_course_ids'] = get_string('error:invalidcourseids', 'local_rapidcmi5');
         }
 
-        $project = $this->_customdata['project'] ?? null;
-        if ($project && empty($errors)) {
+        if (empty($errors)) {
+            $project = $this->_customdata['project'] ?? null;
             try {
-                \local_rapidcmi5\version_uploader::validate($project->id, (int) $data['packagefile'], $data['version']);
+                if ($project) {
+                    \local_rapidcmi5\version_uploader::validate($project->id, (int) $data['packagefile'], $data['version']);
+                } else {
+                    \local_rapidcmi5\version_uploader::validate_package((int) $data['packagefile'], $data['version']);
+                }
             } catch (\moodle_exception $e) {
                 $field = in_array($e->errorcode, ['error:versionexists', 'error:invalidversionlabel']) ? 'version' : 'packagefile';
                 $errors[$field] = $e->getMessage();

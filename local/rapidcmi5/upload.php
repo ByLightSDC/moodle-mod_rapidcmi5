@@ -16,20 +16,25 @@
 
 require_once(__DIR__ . '/../../config.php');
 
+use core\output\notification;
+use local_rapidcmi5\form\upload_package_form;
+use local_rapidcmi5\output\courses_page;
+use local_rapidcmi5\version_uploader;
+
 require_login();
 $context = context_system::instance();
 require_capability('local/rapidcmi5:deploy', $context);
 
 $projectid = optional_param('projectid', 0, PARAM_INT);
-$courseid = $projectid ? optional_param('courseid', 0, PARAM_INT) : 0;
-$navigationparams = [
-    'search' => trim(optional_param('search', '', PARAM_TEXT)),
-    'page' => max(0, optional_param('page', 0, PARAM_INT)),
-];
-if ($courseid) {
-    $navigationparams['courseid'] = $courseid;
-}
 $selectedproject = $projectid ? $DB->get_record('local_rapidcmi5_projects', ['id' => $projectid], '*', MUST_EXIST) : null;
+// The course only shapes the breadcrumb back to the course view, so a missing course is simply dropped.
+$courseid = $projectid ? optional_param('courseid', 0, PARAM_INT) : 0;
+$course = $courseid ? $DB->get_record('course', ['id' => $courseid]) : false;
+$navigationparams = courses_page::list_params(trim(optional_param('search', '', PARAM_TEXT)),
+    max(0, optional_param('page', 0, PARAM_INT)));
+if ($course) {
+    $navigationparams['courseid'] = $course->id;
+}
 $uploadtitle = get_string($selectedproject ? 'uploadnewversion' : 'uploadpackage', 'local_rapidcmi5');
 $uploadurl = new moodle_url('/local/rapidcmi5/upload.php', $projectid ? ['projectid' => $projectid] + $navigationparams : []);
 $cancelurl = $selectedproject ? new moodle_url('/local/rapidcmi5/project.php', ['id' => $projectid] + $navigationparams) :
@@ -40,112 +45,63 @@ $PAGE->set_title($uploadtitle);
 $PAGE->set_heading($uploadtitle);
 $PAGE->set_pagelayout('admin');
 $PAGE->navbar->add(get_string('manage_dashboard', 'local_rapidcmi5'), new moodle_url('/local/rapidcmi5/manage.php'));
-if ($courseid) {
-    $course = get_course($courseid);
-    $PAGE->navbar->add(get_string('projectsbycourse', 'local_rapidcmi5'),
-        new moodle_url('/local/rapidcmi5/courses.php', array_diff_key($navigationparams, ['courseid' => true])));
-    $PAGE->navbar->add(format_string($course->fullname, true, ['context' => context_course::instance($courseid)]),
-        new moodle_url('/local/rapidcmi5/courses.php', $navigationparams));
+if ($course) {
+    $listparams = array_diff_key($navigationparams, ['courseid' => true]);
+    $PAGE->navbar->add(get_string('projectsbycourse', 'local_rapidcmi5'), courses_page::url($listparams));
+    $PAGE->navbar->add(format_string($course->fullname, true, ['context' => context_course::instance($course->id)]),
+        courses_page::url($navigationparams));
 } else {
     $PAGE->navbar->add(get_string('projects', 'local_rapidcmi5'),
         new moodle_url('/local/rapidcmi5/index.php', $navigationparams));
 }
 if ($selectedproject) {
-    $PAGE->navbar->add($selectedproject->name, $cancelurl);
+    $PAGE->navbar->add(format_string($selectedproject->name, true, ['context' => $context]), $cancelurl);
 }
 $PAGE->navbar->add($uploadtitle);
-$form = new \local_rapidcmi5\form\upload_package_form($uploadurl, ['project' => $selectedproject]);
+$form = new upload_package_form($uploadurl, ['project' => $selectedproject]);
 if ($form->is_cancelled()) {
     redirect($cancelurl);
 }
 $uploaderror = null;
 
 if ($data = $form->get_data()) {
-    if ($selectedproject) {
-        try {
-            \local_rapidcmi5\version_uploader::upload($projectid, (int) $data->packagefile,
-                $data->version, $data->release_notes ?? '');
-        } catch (moodle_exception $e) {
-            $uploaderror = $e->getMessage();
+    // Both uploads validate first and save nothing on failure, so errors are shown on the form.
+    try {
+        if ($selectedproject) {
+            version_uploader::upload($projectid, (int) $data->packagefile, $data->version, $data->release_notes ?? '');
+        } else {
+            $uploaded = version_uploader::upload_package((int) $data->packagefile, $data->version,
+                $data->release_notes ?? '', ['name' => $data->project_name ?? '', 'gitrepourl' => $data->git_repo_url ?? '']);
         }
-        if ($uploaderror === null) {
-            redirect($cancelurl, get_string('versionuploaded', 'local_rapidcmi5'), null,
-                \core\output\notification::NOTIFY_SUCCESS);
-        }
-    } else {
-        // Get the draft item ID from the filepicker.
-        $draftitemid = file_get_submitted_draft_itemid('packagefile');
-
-        // Get or create the project.
-        $result = \local_rapidcmi5\project_manager::get_or_create_project(
-            $data->project_identifier,
-            $data->project_name ?? '',
-            $data->git_repo_url ?? ''
-        );
-        $project = $result->project;
-
-        // Upload to content library.
-        $existingpackageid = !empty($project->currentpackageid) ? (int) $project->currentpackageid : 0;
-        $libraryversion = \mod_cmi5\content_library::upload_package_from_draft(
-            $draftitemid,
-            $data->project_name ?: $data->project_identifier,
-            '',
-            0,
-            $existingpackageid
-        );
-        $packageid = (int) $libraryversion->packageid;
-        $libraryversionid = (int) $libraryversion->id;
-
-        // Create version record.
-        $versionrecord = \local_rapidcmi5\project_manager::create_version(
-            $project->id,
-            $data->version,
-            $packageid,
-            '',
-            0,
-            $libraryversion->sha256hash ?? '',
-            $data->release_notes ?? '',
-            $libraryversionid
-        );
-
-        // Deploy to courses if specified. A failed course must not hide the successful upload.
-        $deployresults = [];
+    } catch (moodle_exception $e) {
+        $uploaderror = $e->getMessage();
+    }
+    if ($uploaderror === null && $selectedproject) {
+        redirect($cancelurl, get_string('versionuploaded', 'local_rapidcmi5'), null, notification::NOTIFY_SUCCESS);
+    }
+    if ($uploaderror === null) {
+        // Deploy to the requested courses. A failed course must not hide the successful upload.
+        $messages = [get_string('packageuploaded', 'local_rapidcmi5')];
         $deployfailed = false;
-        if (!empty($data->deploy_course_ids)) {
-            $deploycourseids = array_map('intval',
-                array_filter(array_map('trim', explode(',', $data->deploy_course_ids))));
-            foreach ($deploycourseids as $deploycourseid) {
-                try {
-                    \local_rapidcmi5\deployment_manager::deploy_to_course(
-                        $project->id,
-                        $versionrecord->id,
-                        $libraryversionid,
-                        $deploycourseid,
-                        $project->name,
-                        0
-                    );
-                    $deployresults[] = get_string('deployedtocourse', 'local_rapidcmi5', $deploycourseid);
-                } catch (\Exception $e) {
-                    $deployfailed = true;
-                    $deployresults[] = get_string('error:coursenotfound', 'local_rapidcmi5', $deploycourseid) .
-                        ': ' . $e->getMessage();
-                }
-            }
+        $results = \local_rapidcmi5\deployment_manager::deploy_to_courses($uploaded->project->id, $uploaded->version->id,
+            (int) $uploaded->version->libraryversionid, upload_package_form::parse_course_ids($data->deploy_course_ids ?? ''),
+            $uploaded->project->name);
+        foreach ($results as $result) {
+            $deployfailed = $deployfailed || $result['status'] !== 'success';
+            $messages[] = $result['status'] === 'success' ?
+                get_string('deployedtocourse', 'local_rapidcmi5', $result['courseid']) :
+                get_string('error:deployfailed', 'local_rapidcmi5', (object) $result);
         }
-
-        // Redirect to project detail page, reporting each requested deployment.
-        $url = new moodle_url('/local/rapidcmi5/project.php', ['id' => $project->id]);
-        $message = implode(' ', array_merge([get_string('packageuploaded', 'local_rapidcmi5')], $deployresults));
-        redirect($url, $message, null, $deployfailed ?
-            \core\output\notification::NOTIFY_WARNING : \core\output\notification::NOTIFY_SUCCESS);
+        redirect(new moodle_url('/local/rapidcmi5/project.php', ['id' => $uploaded->project->id]), implode(' ', $messages),
+            null, $deployfailed ? notification::NOTIFY_WARNING : notification::NOTIFY_SUCCESS);
     }
 }
 
-echo \local_rapidcmi5\dashboard::header($courseid ? 'courses' : 'projects', 'uploadpageintro');
+echo \local_rapidcmi5\dashboard::header($course ? 'courses' : 'projects', 'uploadpageintro');
 if ($uploaderror !== null) {
     // Already a formatted language string from our own moodle_exception; escaping again would
     // render entities literally.
-    echo $OUTPUT->notification($uploaderror, \core\output\notification::NOTIFY_ERROR);
+    echo $OUTPUT->notification($uploaderror, notification::NOTIFY_ERROR);
 }
 echo html_writer::start_div('rcmi-form-panel');
 $form->display();

@@ -137,19 +137,28 @@ class project_manager {
         return $version;
     }
 
-    /** Resolve a tracked revision without silently selecting a newer library upload. */
-    public static function get_library_version(\stdClass $version) {
+    /**
+     * Resolve the exact library revision a project version was built from, never a newer upload.
+     *
+     * @param \stdClass $version A local_rapidcmi5_versions record.
+     * @return \stdClass|false The cmi5_package_versions record, or false when it cannot be identified.
+     */
+    public static function get_library_version(\stdClass $version): \stdClass|false {
         global $DB;
-        $params = ['packageid' => $version->packageid];
         if (!empty($version->libraryversionid)) {
-            $params['id'] = $version->libraryversionid;
-            return $DB->get_record('cmi5_package_versions', $params);
+            // Strict on purpose: if the stored revision was deleted, do not guess a replacement by hash.
+            return $DB->get_record('cmi5_package_versions',
+                ['id' => $version->libraryversionid, 'packageid' => $version->packageid]);
         }
-        if (!empty($version->sha256hash)) {
-            $params['sha256hash'] = $version->sha256hash;
+        // Rows created before libraryversionid was stored. Without a hash the package's remaining
+        // revisions say nothing about which one this version was, so refuse rather than guess.
+        if (empty($version->sha256hash)) {
+            return false;
         }
-        $matches = $DB->get_records('cmi5_package_versions', $params, 'id ASC', '*', 0, 2);
-        return count($matches) === 1 ? reset($matches) : false;
+        // The same ZIP uploaded twice gives identical revisions; any of them has the right content.
+        $matches = $DB->get_records('cmi5_package_versions',
+            ['packageid' => $version->packageid, 'sha256hash' => $version->sha256hash], 'id ASC', '*', 0, 1);
+        return $matches ? reset($matches) : false;
     }
 
     /**
@@ -245,7 +254,7 @@ class project_manager {
 
         $sql = "SELECT versionnumber FROM {local_rapidcmi5_versions}
                 WHERE projectid = :projectid AND id != :excludeid
-                ORDER BY timecreated DESC";
+                ORDER BY timecreated DESC, id DESC";
         $record = $DB->get_record_sql($sql, [
             'projectid' => $projectid,
             'excludeid' => $excludeversionid,

@@ -107,6 +107,7 @@ On a disposable local Moodle site with both plugins installed, run from the Mood
 php local/rapidcmi5/cli/adoption_smoke.php --run
 php local/rapidcmi5/cli/version_upload_smoke.php --run
 php local/rapidcmi5/cli/course_browser_smoke.php --run
+php local/rapidcmi5/cli/bulk_update_smoke.php --run
 ```
 
 These are CLI scripts rather than PHPUnit tests, so CI will not pick them up. They cover

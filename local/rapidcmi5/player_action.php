@@ -149,20 +149,9 @@ switch ($action) {
 
         $latestver = $DB->get_record('local_rapidcmi5_versions', ['id' => $project->currentversionid], '*', MUST_EXIST);
 
-        $libraryversion = \local_rapidcmi5\project_manager::get_library_version($latestver);
-
-        if (!$libraryversion) {
-            throw new moodle_exception('error:libraryrevisionmissing', 'local_rapidcmi5');
-        }
-
-        // Use deployment_manager to update the activity.
-        \local_rapidcmi5\deployment_manager::deploy_to_course(
-            (int) $project->id,
-            (int) $latestver->id,
-            (int) $libraryversion->id,
-            (int) $deployment->courseid,
-            $project->name
-        );
+        // Keeps the activity name and learner progress, like the bulk update on the Updates page.
+        \local_rapidcmi5\version_uploader::with_project_lock($project->identifier,
+            fn() => \local_rapidcmi5\deployment_manager::update_deployment($deploymentid, (int) $latestver->id));
 
         \core\notification::success(
             get_string('contentupdated', 'local_rapidcmi5', $latestver->versionnumber)

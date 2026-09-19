@@ -75,6 +75,7 @@ class dashboard {
             'projects' => ['index.php', 'projects'],
             'courses' => ['courses.php', 'projectsbycourse'],
             'players' => ['player.php', 'playerversions'],
+            'updates' => ['updates.php', 'updates'],
             'unmanaged' => ['unmanaged.php', 'unmanagedactivities'],
         ];
     }

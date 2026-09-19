@@ -48,6 +48,8 @@ $cards = [
         fn() => course_browser::count_courses(), 'dashboardcoursecount'),
     dashboard::overview_card('player.php', 'playerversions', 'i/settings',
         fn() => $DB->count_records('local_rapidcmi5_player_versions'), 'dashboardplayercount'),
+    dashboard::overview_card('updates.php', 'updates', 'i/reload',
+        fn() => \local_rapidcmi5\update_finder::count(), 'dashboardupdatecount'),
     dashboard::overview_card('unmanaged.php', 'unmanagedactivities', 'i/search'),
 ];
 echo dashboard::header('overview', 'dashboardintro');

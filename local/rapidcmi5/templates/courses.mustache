@@ -6,12 +6,13 @@
     {{#isdetail}}
         {{> local_rapidcmi5/detail_navigation }}
         {{#projects}}
-        <div class="card mb-3">
+        <section class="card mb-3 rcmi-course-project">
             <div class="card-body">
                 <h3 class="h5"><a href="{{{projecturl}}}">{{{name}}}</a></h3>
                 <p class="text-break"><code>{{identifier}}</code></p>
                 <p>{{#str}}currentversion, local_rapidcmi5{{/str}}: <strong>{{latestversion}}</strong></p>
-                <div class="rcmi-table-panel table-responsive">
+            </div>
+                <div class="table-responsive">
                     <table class="table mb-0">
                         <caption class="sr-only">{{#str}}managedactivities, local_rapidcmi5{{/str}}: {{{name}}}</caption>
                         <thead><tr>
@@ -26,8 +27,7 @@
                         </tr>{{/activities}}</tbody>
                     </table>
                 </div>
-            </div>
-        </div>
+        </section>
         {{/projects}}
         {{^hasprojects}}<div class="alert alert-info rcmi-empty-state">{{#str}}nocourseprojects, local_rapidcmi5{{/str}}</div>{{/hasprojects}}
     {{/isdetail}}

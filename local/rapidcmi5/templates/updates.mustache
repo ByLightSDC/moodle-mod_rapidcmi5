@@ -70,7 +70,7 @@
                         <tbody>{{#activities}}<tr>
                             <td>
                                 {{#selectable}}
-                                <input id="rcmi-updates-deployment-{{deploymentid}}" type="checkbox" name="deploymentids[]"
+                                <input id="rcmi-updates-deployment-{{deploymentid}}" type="checkbox" class="form-check-input" name="deploymentids[]"
                                        value="{{deploymentid}}" data-action="toggle" data-toggle="slave"
                                        data-togglegroup="{{togglegroup}}"{{#checked}} checked{{/checked}}
                                        aria-labelledby="rcmi-updates-activity-{{deploymentid}}">
@@ -94,7 +94,17 @@ require(['jquery', 'core/checkbox-toggleall'], function($, ToggleAll) {
     var form = $('#rcmi-updates-form');
     var update = function() {
         form.find('[data-region="rcmi-updates-count"]').text(form.find('input[name="deploymentids[]"]:checked').length);
+        // Show a dash on master checkboxes whose group is only partly selected.
+        form.find('[data-toggle="master"]').each(function() {
+            var group = this.dataset.togglegroup;
+            var slaves = form.find('[data-toggle="slave"]').filter(function() {
+                return this.dataset.togglegroup.indexOf(group) === 0;
+            });
+            var checked = slaves.filter(':checked').length;
+            this.indeterminate = checked > 0 && checked < slaves.length;
+        });
     };
+    update();
     // Master checkboxes change their activities without change events, so recount after every click.
     form.on('click change', 'input[type="checkbox"]', function() {
         setTimeout(update, 0);

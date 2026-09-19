@@ -189,7 +189,13 @@
 .rapidcmi5-dashboard .rcmi-update-project .table th:last-child,
 .rapidcmi5-dashboard .rcmi-update-project .table td:last-child { padding-right: 1.5rem; }
 .rapidcmi5-dashboard .rcmi-update-project .table tbody tr:first-child td { border-top: 0; }
-.rapidcmi5-dashboard .rcmi-update-project input[type="checkbox"] { accent-color: var(--rcmi-accent); }
+.rapidcmi5-dashboard .rcmi-update-project .table td { vertical-align: middle; }
+.rapidcmi5-dashboard .rcmi-update-project tbody tr:has(.form-check-input:checked) > td {
+    background: color-mix(in srgb, var(--rcmi-accent) 7%, transparent);
+}
+.rapidcmi5-dashboard .rcmi-update-project tbody tr:has(.form-check-input:checked) > td:first-child {
+    box-shadow: inset 3px 0 0 var(--rcmi-accent);
+}
 @media (max-width: 767px) {
     .rapidcmi5-dashboard .rcmi-update-project-heading { padding: 1.1rem; }
     .rapidcmi5-dashboard .rcmi-update-project .table th:first-child,
@@ -205,4 +211,54 @@
     opacity: 1;
     box-shadow: none;
     text-shadow: none;
+}
+
+/* Update selection checkboxes: one themed control for select-all, project and activity rows. */
+.local-rapidcmi5-updates .form-check:has(> .form-check-input) {
+    display: flex;
+    align-items: center;
+    gap: .65rem;
+    padding-left: 0;
+    margin-bottom: 0;
+}
+/* Size steps down from select-all to project to activity row. */
+.local-rapidcmi5-updates .form-check-input[type="checkbox"] {
+    --rcmi-check-size: .875rem;
+    float: none;
+    flex-shrink: 0;
+    width: var(--rcmi-check-size);
+    height: var(--rcmi-check-size);
+    margin: 0;
+    border: 1px solid color-mix(in srgb, var(--rcmi-muted) 60%, transparent);
+    border-radius: .22rem;
+    background-color: var(--rcmi-surface);
+    cursor: pointer;
+    vertical-align: middle;
+    transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.local-rapidcmi5-updates .rcmi-update-project-heading .form-check-input[type="checkbox"] {
+    --rcmi-check-size: 1rem;
+    border-width: 1.5px;
+    border-radius: .25rem;
+}
+.local-rapidcmi5-updates .rcmi-toolbar .form-check-input[type="checkbox"] {
+    --rcmi-check-size: 1.05rem;
+    border-width: 1.5px;
+    border-radius: .28rem;
+}
+.local-rapidcmi5-updates .rcmi-toolbar .form-check-label { font-weight: 600; }
+.local-rapidcmi5-updates .form-check-input[type="checkbox"]:hover { border-color: var(--rcmi-accent); }
+.local-rapidcmi5-updates .form-check-input[type="checkbox"]:checked,
+.local-rapidcmi5-updates .form-check-input[type="checkbox"]:indeterminate {
+    background-color: var(--rcmi-accent);
+    border-color: var(--rcmi-accent);
+}
+.local-rapidcmi5-updates .form-check-input[type="checkbox"]:focus { box-shadow: none; }
+.local-rapidcmi5-updates .form-check-input[type="checkbox"]:focus-visible {
+    border-color: var(--rcmi-accent);
+    box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--rcmi-accent) 28%, transparent);
+}
+.local-rapidcmi5-updates .form-check-label { cursor: pointer; }
+@media (prefers-reduced-motion: reduce) {
+    .local-rapidcmi5-updates .form-check-input[type="checkbox"] { transition: none; }
 }
